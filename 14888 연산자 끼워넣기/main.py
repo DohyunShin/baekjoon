@@ -1,69 +1,62 @@
-def pm(n, k, arr, res):
-    if k == 0:
-        res.append(arr[:])
-        #print(arr)
+g_add = 0
+g_sub = 0
+g_mul = 0
+g_div = 0
+
+g_max = -1000000000
+g_min = 1000000000
+
+
+# Brute Force
+def brtf(arr, i, add, sub, mul, div, total):
+    global g_add
+    global g_sub
+    global g_mul
+    global g_div
+    global g_max
+    global g_min
+
+    if len(arr) == i:
+        if g_max < total:
+            g_max = total
+        if g_min > total:
+            g_min = total
         return
 
-    for i in range(n - 1, -1, -1):
-        arr[i], arr[n - 1] = arr[n - 1], arr[i]
-        pm(n - 1, k - 1, arr, res)
-        arr[i], arr[n - 1] = arr[n - 1], arr[i]
+    if add < g_add:
+        brtf(arr, i + 1, add + 1, sub, mul, div, total + arr[i])
+    if sub < g_sub:
+        brtf(arr, i + 1, add, sub + 1, mul, div, total - arr[i])
+    if mul < g_mul:
+        brtf(arr, i + 1, add, sub, mul + 1, div, total * arr[i])
+    if div < g_div:
+        temp = 0
+        if (total < 0 and arr[i] >= 0) or (total >= 0 and arr[i] < 0):
+            temp = abs(total) // abs(arr[i])
+            total = temp * -1
+        else:
+            temp = total // arr[i]
+            total = temp
+        brtf(arr, i + 1, add, sub, mul, div + 1, total)
 
 
 def main():
-    # 입력
-    n = int(input()) # 수의 개수
-    a = list(map(int, input().split())) # 수
-    add, sub, mul, div = list(map(int, input().split())) # 각 연산자 개수
-    op = [] # 1: add, 2: sub, 3: mul, 4: div
+    global g_add
+    global g_sub
+    global g_mul
+    global g_div
+    global g_max
+    global g_min
 
-    for i in range(add):
-        op.append(1)
-    for i in range(sub):
-        op.append(2)
-    for i in range(mul):
-        op.append(3)
-    for i in range(div):
-        op.append(4)
+    n = int(input())
+    a = list(map(int, input().split()))
+    g_add, g_sub, g_mul, g_div = list(map(int, input().split()))
 
-    res = []
-    pm(len(op), len(op), op, res)
+    brtf(a, 1, 0, 0, 0, 0, a[0])
 
-    max = 0
-    min = 0
+    print(g_max)
+    print(g_min)
 
-    for i in range(0, len(res)):
-        sum = 0
-        for j in range(0, len(a)):
-            if j == 0:
-                sum = a[j]
-            else:
-                case_op = res[i][j - 1]
-                #print(sum, case_op, a[j])
-                if case_op == 1:
-                    sum += a[j]
-                elif case_op == 2:
-                    sum -= a[j]
-                elif case_op == 3:
-                    sum *= a[j]
-                elif case_op == 4:
-                    if (sum < 0 and a[j] >= 0) or (sum >= 0 and a[j] < 0):
-                        temp = abs(sum) // abs(a[j])
-                        sum = temp * -1
-                    else:
-                        sum //= a[j]
-
-        if i == 0:
-            max = sum
-            min = sum
-        else:
-            if max < sum:
-                max = sum
-            if min > sum:
-                min = sum
-
-    print(max)
-    print(min)
 
 if __name__ == "__main__":
     main()
