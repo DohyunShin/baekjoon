@@ -1,196 +1,168 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class Main {
-
 	static int N, M;
-	static int map[][];
-	static int dx[] = {0, 0, -1, 1};
-	static int dy[] = {-1, 1, 0, 0};
+	static int[][] map;
+	static final Tec[] tecs = {new Tec1(), new Tec2(), new Tec3(), new Tec4(), new Tec5()};
 	static int max = 0;
-	static boolean visit[][];
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		M = sc.nextInt();
+	static class Tec{
+		int rotationCnt;
+		int[][] dr;
+		int[][] dc;
+	}
+	//ㅡ
+	static class Tec1 extends Tec{
+		public Tec1() {
+			rotationCnt = 2;
+			int[][] temp_dr = {
+					{0,0,0,0},
+					{0,1,1,1}
+			};
+			int[][] temp_dc = {
+					{0,1,1,1},
+					{0,0,0,0}
+			};
+			dr = temp_dr;
+			dc = temp_dc;
+		};
+	}
+	//ㅁ
+	static class Tec2 extends Tec{
+		public Tec2() {
+			rotationCnt = 1;
+			int[][] temp_dr = {
+					{0,0,1,0}
+			};
+			int[][] temp_dc = {
+					{0,1,0,-1}
+			};
+			dr = temp_dr;
+			dc = temp_dc;
+		};
+	}
+	//ㄱ
+	static class Tec3 extends Tec{
+		public Tec3() {
+			rotationCnt = 8;
+			int[][] temp_dr = {
+					{0,1,1,0},
+					{0,-1,0,0},
+					{0,0,1,1},
+					{0,0,0,-1},
+					{0,-1,-1,0},
+					{0,1,0,0},
+					{0,0,-1,-1},
+					{0,0,0,1}
+			};
+			int[][] temp_dc = {
+					{0,0,0,1},
+					{0,0,1,1},
+					{0,1,0,0},
+					{0,1,1,0},
+					{0,0,0,1},
+					{0,0,1,1},
+					{0,1,0,0},
+					{0,1,1,0}
+			};
+			dr = temp_dr;
+			dc = temp_dc;
+		};
+	}
+	//ㄹ
+	static class Tec4 extends Tec{
+		public Tec4() {
+			rotationCnt = 4;
+			int[][] temp_dr = {
+					{0,1,0,1},
+					{0,1,0,1},
+					{0,0,1,0},
+					{0,0,1,0}
+			};
+			int[][] temp_dc = {
+					{0,0,1,0},
+					{0,0,-1,0},
+					{0,-1,0,-1},
+					{0,1,0,1}
+			};
+			dr = temp_dr;
+			dc = temp_dc;
+		};
+	}
+	//ㅜ
+	static class Tec5 extends Tec{
+		public Tec5() {
+			rotationCnt = 4;
+			int[][] temp_dr = {
+					{0,0,1,-1},
+					{0,0,-1,2},
+					{0,1,0,1},
+					{0,0,-1,1}
+			};
+			int[][] temp_dc = {
+					{0,1,0,1},
+					{0,1,0,0},
+					{0,0,1,-1},
+					{0,1,0,1}
+			};
+			dr = temp_dr;
+			dc = temp_dc;
+		};
+	}
+	
+	public static void main(String[] args) throws IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		N = Integer.parseInt(st.nextToken());
+		M = Integer.parseInt(st.nextToken());
 		map = new int[N][M];
-		visit = new boolean[N][M];
-		
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < M; j++) {
-				map[i][j] = sc.nextInt();
+		for(int i = 0; i < N; ++i) {
+			st = new StringTokenizer(br.readLine());
+			for(int j = 0; j < M; ++j) {
+				map[i][j] = Integer.parseInt(st.nextToken());
 			}
 		}
+		br.close();
 		
-		sc.close();
-		
-		play2();
+		solution();
 		System.out.println(max);
-		
 	}
 	
-	private static void play2() {
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < M; j++) {
-				visit [i][j] = true; //dfs들어갈때 체크
-				dfs(j, i, 0, 0, visit);
-				visit [i][j] = false; //dfs나올때 체크해제
-				exceptionType(j, i);
+	private static void solution() {
+		for(int r=0;r<N;r++) {
+			for(int c=0;c<M;c++) {
+				tecExecute(r,c);
 			}
 		}
 	}
 	
-	//ㅜ 모양을 빼고는 깊이 4의 dfs의 네방향 검사로  모두 탐색할 수 있다.
-	private static void dfs(int x, int y, int sum, int depth, boolean visit[][]) {		
-		if(depth == 4) {
-			if(max < sum) {
-				max = sum;
-			}
-			return;
-		}
-		
-		
-		sum += map[y][x];
-		depth++;
-		
-		for(int i = 0; i < 4; i++) {
-			int nx = x + dx[i];
-			int ny = y + dy[i];
-			
-			if(!(nx >= M || ny >= N || ny < 0 || nx < 0) && visit[ny][nx] == false) {
-				visit [ny][nx] = true; //dfs들어갈때 체크
-				dfs(nx, ny, sum, depth, visit);
-				visit [ny][nx] = false; //dfs나올때 체크해제
-			}
-		}
-	}
-	
-	//ㅜ 모양
-	private static void exceptionType(int x, int y) {
-		final int tecs_dx[][] = {
-				{1, 2, 1},
-				{1, 1, 1},
-				{1, 1, 2},
-				{0, 1, 0}
-		};
-		
-		final int tecs_dy[][] = {
-				{0, 0, 1},
-				{0, -1, 1},
-				{0, -1, 0},
-				{1, 1, 2}
-		};
-		
-		for(int i = 0; i < 4; i++) {	
-			boolean result = true;
-			int sum = map[y][x];
-			
-			for(int j = 0; j < 3; j++) {
-				int ny = y + tecs_dy[i][j];
-				int nx = x + tecs_dx[i][j];
+	private static void tecExecute(int r, int c) {
+		for(int i = 0; i < tecs.length; i++) {
+			Tec tec = tecs[i];
+			for(int j = 0; j < tec.rotationCnt; j++) {
+				int[] dr = tec.dr[j];
+				int[] dc = tec.dc[j];
 				
-				if(!(ny >= N || nx >= M || nx < 0 || ny <0)) {
-					sum += map[ny][nx];
-				}
-				else {
-					result = false;
-					break;
-				}
-			}
-			
-			if(result == true && max < sum) {
-				max = sum;
-			}
-		}
-	}
-	
-	private static void play() {
-		final int tecsCnt = 19;
-		final int tecs_dx[][] = {
-				//ㅣ
-				{1, 2, 3},
-				 //ㅡ
-				{0, 0, 0},
-				//ㅁ
-				{1, 0, 1},
-				//L
-				{0, 0, 1},
-				{0, 1, 2},
-				{1, 1, 1},
-				{1, 2, 2},
-				//L R
-				{1, 1, 1},
-				{0, 1, 2},
-				{1, 0, 0},
-				{1, 2, 2},
-				//Z
-				{0, 1, 1},
-				{1, 1, 2},
-				//Z R
-				{1, 1, 0},
-				{1, 1, 2},
-				//T
-				{1, 2, 1},
-				{1, 1, 1},
-				{1, 1, 2},
-				{0, 1, 0}
-		};
-		
-		final int tecs_dy[][] = {
-				//ㅣ
-				{0, 0, 0},
-				//ㅡ
-				{1, 2, 3},
-				//ㅁ
-				{0, 1, 1},
-				//L
-				{1, 2, 2},
-				{1, 0, 0},
-				{0, 1, 2},
-				{0, 0, -1},
-				//L R
-				{0, -1, -2},
-				{1, 1, 1},
-				{0, 1, 2},
-				{0, 0, 1},
-				//Z
-				{1, 1, 2},
-				{0, -1, -1},
-				//Z R
-				{0, -1, 1},
-				{0, 1, 1},
-				//T
-				{0, 0, 1},
-				{0, -1, 1},
-				{0, -1, 0},
-				{1, 1, 2}
-		};
-		
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < M; j++) {
-				for(int z = 0; z < tecsCnt; z++) {
-					boolean result = true;
-					int sum = map[i][j];
-					
-					for(int h = 0; h < 3; h++) {
-						int ny = i + tecs_dy[z][h];
-						int nx = j + tecs_dx[z][h];
-						
-						if(!(ny >= N || nx >= M || nx < 0 || ny <0)) {
-							sum += map[ny][nx];
-						}
-						else {
-							result = false;
-							break;
-						}
+				int nr =r, nc=c;
+				int sum=0;
+				boolean success = true;
+				for(int d = 0; d < 4; d++) {
+					nr += dr[d];
+					nc += dc[d];
+					if(!(nr >=0 && nr < N && nc >=0 && nc < M)) {
+						success = false;
+						break;
 					}
-					
-					if(result == true && max < sum) {
-						max = sum;
-					}
+					sum+=map[nr][nc];
+				}
+				
+				if(success) {
+					if(max < sum) max = sum;
 				}
 			}
 		}
 	}
-
 }
