@@ -1,40 +1,50 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class Main {
-
-	static int N;
-	static int T[];
-	static int P[];
-	static int max;
-
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		T = new int[N];
-		P = new int[N];
+	
+	static int N; //1~15
+	static int[] T = new int[15];
+	static int[] P = new int[15];
+	static boolean[] visit = new boolean[15];
+	static int max = 0;
+	
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		N = Integer.parseInt(br.readLine());
+		StringTokenizer st = null;
 		for(int i = 0; i < N; i++) {
-			T[i] = sc.nextInt();
-			P[i] = sc.nextInt();
+			st = new StringTokenizer(br.readLine());
+			T[i] = Integer.parseInt(st.nextToken());
+			P[i] = Integer.parseInt(st.nextToken());
 		}
-		sc.close();
+		br.close();
 		
-		dfs(0,0);
+		solution();
 		System.out.println(max);
 	}
 	
-	static private void dfs(int day, int pay) {
-		if(day >= N) {
-			if(pay > max) {
-				max = pay;
-			}
+	private static void solution() {
+		recursive(0, 0);
+	}
+	
+	private static void recursive(int idx, int sum) {
+		if(idx >= N) {
+			if(sum > max)
+				max = sum;
 			return;
 		}
-	
-		//일하지 않는 경우
-		dfs(day + 1, pay);
-		//일하는 경우(할 수 있으면)
-		if(day + T[day] <= N) {
-			dfs(day + T[day], pay + P[day]);	
+		
+		if(visit[idx]) return;
+		
+		if(idx+T[idx] <= N) {
+			visit[idx] = true;
+			recursive(idx+T[idx], sum+P[idx]);
+			visit[idx] = false;
 		}
+		
+		recursive(idx+1, sum);
 	}
 }
