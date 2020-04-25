@@ -1,163 +1,190 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class Main {
-
-	static int n;
-	static int map[][];
-	final static int dx[] = {0, 0, -1, 1};
-	final static int dy[] = {-1, 1, 0, 0};
-	static int max;
 	
+	static int N; //1~20
+	static int[][] map = new int[20][20];
+	static int max = Integer.MIN_VALUE;
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		n = sc.nextInt() + 2; //벽 패딩 처리
-		map = new int[n][n];
-		for(int i = 0; i < n; i++) {
-			for(int j = 0; j < n; j++) {
-				map[i][j] = -1; //패딩
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		N = Integer.parseInt(br.readLine());
+		StringTokenizer st = null;
+		for(int i = 0; i < N; i++) {
+			st = new StringTokenizer(br.readLine());
+			for(int j = 0; j < N; j++) {
+				map[i][j] = Integer.parseInt(st.nextToken());
 			}
 		}
+		br.close();
 		
-		for(int i = 1; i < n - 1; i++) {
-			for(int j = 1; j < n -1 ; j++) {
-				map[i][j] = sc.nextInt();
-			}
-		}
-		sc.close();
-		
-		recur(map, 0);
+		findMax();//최대값 초기 설정
+		solution();
 		System.out.println(max);
 	}
 	
-	private static void recur(int map[][], int cnt) {
-		//5회를 넘어가거면 종료
+	private static void solution() {
+		recursive(0);
+	}
+	
+	private static void recursive(int cnt) {
 		if(cnt == 5) {
 			return;
 		}
 		
-		cnt++;
+		//현재 맵 상태 저장(원복을 위해)
+		int[][] pre = new int[20][20];
+		for(int i=0;i<N;i++) {
+			pre[i] = map[i].clone();
+		}
 		
-		for(int i = 0; i < 4; i++) {
-			int copy[][] = new int[map.length][map.length];
-			for(int j = 0; j < map.length; j++) {
-				copy[j] = map[j].clone();	
+		for(int d = 0; d < 4; d++) {
+			if(move(d)) {
+				//변화가 있을 경우에만
+				findMax();
+				recursive(cnt+1);
+				
+				//원복
+				for(int i=0;i<N;i++) {
+					map[i] = pre[i].clone();
+				}
 			}
-			
-			
-			move(copy, i);
-			//
-			//System.out.println("dir: " + i + ", cnt: " + cnt);
-			//printMap(copy);
-			//
-			int findMax = findMax(copy);
-			if(max < findMax) {
-				max = findMax;
-			}
-			
-			recur(copy, cnt);	
 		}
 	}
 	
-	private static void moveEx(int map[][], boolean merged[][], int cy, int cx, int d) {
-		if(map[cy][cx] == 0) {
-			return;
-		}
-		
-		int nx, ny;
-		
-		//자리 이동
-		while(true) {
-			nx = cx + dx[d];
-			ny = cy + dy[d];
-			
-			//벽을 만나거나 다른 수를 만날 때 멈춘다.
-			if(map[ny][nx] == -1 || map[ny][nx] != 0) {
-				break;
+	private static void findMax() {
+		for(int r=0;r<N;r++) {
+			for(int c=0;c<N;c++) {
+				if(map[r][c] > max) max = map[r][c];
 			}
-			
-			//빈자리 이동
-			if(map[ny][nx] == 0) {
-				map[ny][nx] = map[cy][cx];
-				map[cy][cx] = 0;
-				cy = ny;
-				cx = nx;
-			}
-		}
-		
-		//앞에 같은 수 있으면 앞으로 합치기
-		if(map[ny][nx] == map[cy][cx] && merged[ny][nx] == false) {
-			map[cy][cx] = 0;
-			map[ny][nx] *= 2;
-			merged[ny][nx] = true;
 		}
 	}
-
-	private static void move(int map[][], int d) {
-		//움직이는 방향쪽으로의 가장 앞에 있는 숫자 부터 움직인다.
-		//예) 상: 맨 윗 줄 부터 움직인다. 좌: 맨 왼쪽 부터 움직인다.
-		
-		boolean merged[][] = new boolean[map.length][map.length];//이미 합쳐진 수 체크
+	
+	private static boolean move(int d) {
+		boolean isChanged = false; //값이 변경되거나 이동할 경우 true
 		
 		switch(d) {
-		case 0:
-			//상
-			for(int i = 1; i < n - 1; i++) {
-				for(int j = 1; j < n - 1; j++) {
-					moveEx(map, merged, i, j, d);
+		case 0: //상
+			for(int c=0;c<N;c++) {
+				for(int r=0;r<N;r++) {
+					if(map[r][c] == 0) continue;
+					
+					for(int nr=r+1; nr<N;nr++) {
+						if(map[nr][c] != 0 && map[nr][c] != map[r][c]) break;
+						
+						if(map[nr][c] == 0) continue;
+						else if(map[nr][c] == map[r][c]) {
+							map[r][c] *= 2;
+							map[nr][c] = 0;
+							isChanged = true;
+							break;
+						}
+					}
+					
+					//이동
+					for(int mr = 0; mr < r; mr++) {
+						if(map[mr][c] == 0) {
+							map[mr][c] = map[r][c];
+							map[r][c] = 0;
+							isChanged = true;
+							break;
+						}
+					}
 				}
 			}
 			break;
-		case 1:
-			//하
-			for(int i = n - 2; i >= 1; i--) {
-				for(int j = 1; j < n - 1; j++) {
-					moveEx(map, merged, i, j, d);
+		case 1: //하
+			for(int c=0;c<N;c++) {
+				for(int r=N-1;r>=0;r--) {
+					if(map[r][c] == 0) continue;
+					
+					for(int nr=r-1; nr>=0;nr--) {
+						if(map[nr][c] != 0 && map[nr][c] != map[r][c]) break;
+						
+						if(map[nr][c] == 0) continue;
+						else if(map[nr][c] == map[r][c]) {
+							map[r][c] *= 2;
+							map[nr][c] = 0;
+							isChanged = true;
+							break;
+						}
+					}
+					
+					//이동
+					for(int mr = N-1; mr > r; mr--) {
+						if(map[mr][c] == 0) {
+							map[mr][c] = map[r][c];
+							map[r][c] = 0;
+							isChanged = true;
+							break;
+						}
+					}
 				}
 			}
 			break;
-		case 2:
-			//좌
-			for(int j = 1; j < n - 1; j++) {
-				for(int i = 1; i < n - 1; i++) {
-					moveEx(map, merged, i, j, d);
+		case 2: //좌
+			for(int r=0;r<N;r++) {
+				for(int c=0;c<N;c++) {
+					if(map[r][c] == 0) continue;
+					
+					for(int nc=c+1; nc<N;nc++) {
+						if(map[r][nc] != 0 && map[r][nc] != map[r][c]) break;
+						
+						if(map[r][nc] == 0) continue;
+						else if(map[r][nc] == map[r][c]) {
+							map[r][c] *= 2;
+							map[r][nc] = 0;
+							isChanged = true;
+							break;
+						}
+					}
+					
+					//이동
+					for(int mc = 0; mc < c; mc++) {
+						if(map[r][mc] == 0) {
+							map[r][mc] = map[r][c];
+							map[r][c] = 0;
+							isChanged = true;
+							break;
+						}
+					}
 				}
 			}
 			break;
-		case 3:
-			//우
-			for(int j = n - 2; j >= 1; j--) {
-				for(int i = 1; i < n - 1; i++) {
-					moveEx(map, merged, i, j, d);
+		case 3: //우
+			for(int r=0;r<N;r++) {
+				for(int c=N-1;c>=0;c--) {
+					if(map[r][c] == 0) continue;
+					
+					for(int nc=c-1; nc>=0;nc--) {
+						if(map[r][nc] != 0 && map[r][nc] != map[r][c]) break;
+						
+						if(map[r][nc] == 0) continue;
+						else if(map[r][nc] == map[r][c]) {
+							map[r][c] *= 2;
+							map[r][nc] = 0;
+							isChanged = true;
+							break;
+						}
+					}
+					
+					//이동
+					for(int mc = N-1; mc > c; mc--) {
+						if(map[r][mc] == 0) {
+							map[r][mc] = map[r][c];
+							map[r][c] = 0;
+							isChanged = true;
+							break;
+						}
+					}
 				}
 			}
-
 			break;
 		}
-	}
-	
-	private static int findMax(int map[][]) {
-		int max = 0;
 		
-		for(int i = 1; i < n - 1; i++) {
-			for(int j = 1; j < n - 1; j++) {
-				if(max < map[i][j]) {
-					max = map[i][j];
-				}
-			}
-		}
-		
-		return max;
+		return isChanged;
 	}
-	
-	private static void printMap(int map[][]) {
-		for(int i = 1; i < n - 1; i++) {
-			for(int j = 1; j < n - 1; j++) {
-				System.out.print(map[i][j] + "\t");
-			}
-			System.out.println();
-		}
-		System.out.println();
-	}
-
 }
