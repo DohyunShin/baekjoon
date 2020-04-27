@@ -1,187 +1,143 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
-import java.util.Scanner;
+import java.util.LinkedList;
+import java.util.StringTokenizer;
 
 public class Main {
-
-	static int N; //보드 크기
-	static int K; //사과 개수
-	static int L; //뱀의 방향 변환 횟수
-	static HashMap<Integer, String> XC = new HashMap<>(); //X초 끝난 뒤 방향(L:왼, D:오)
-	static int map[][];
-	static int cnt; //시간이면서 횟수 (1초에 1번 움직임)
-	static int d; //상하좌우 = 0, 1, 2, 3
-	static int dx[] = { 0, 0, -1, 1};
-	static int dy[] = {-1 , 1, 0, 0};
+	static class Point {
+		int r, c;
+		public Point(int r, int c) {
+			this.r = r;
+			this.c = c;
+		}
+		
+		public Point() {}
+	}
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt() + 2; //패딩처리 벽 = -1
-		map = new int[N][N];
+	static int N; //2~100
+	static int K; //0~100 사과 개수
+	static boolean[][] apples = new boolean[100][100];
+	static int L; //1~100 방향 변환 횟수
+	//초 1~10,000 이하
+	//방향, L:왼쪽, D:오른쪽 (90방향 회전)
+	static HashMap<Integer, Character> moveInfoMap = new HashMap<Integer, Character>(); 
+	static int d = 0; //현재 이동 방향
+	//우하좌상
+	static int[] dr = {0,1,0,-1};
+	static int[] dc = {1,0,-1,0};
+	static int counter = 1;
+	static LinkedList<Point> snake = new LinkedList<Main.Point>();
+	
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		N = Integer.parseInt(br.readLine());
+		K = Integer.parseInt(br.readLine());
+		StringTokenizer st = null;
+		for(int i=0;i<K;i++) {
+			st = new StringTokenizer(br.readLine());
+			apples[Integer.parseInt(st.nextToken())-1][Integer.parseInt(st.nextToken())-1] = true;
+		}
+		snake.addFirst(new Point(0,0));
+		L = Integer.parseInt(br.readLine());
+		for(int i=0;i<L;i++) {
+			st = new StringTokenizer(br.readLine());
+			moveInfoMap.put(Integer.parseInt(st.nextToken()), st.nextToken().charAt(0));
+		}
+		br.close();
+		
+		solution();
+		System.out.println(counter);
+	}
+
+	private static void solution() {
+		Point head = null;
+		
+		while(true) {
+			//뱀의 다음 이동 위치 구하기
+			Point next = new Point();
+			head = snake.getFirst();
+			next.r = head.r + dr[d];
+			next.c = head.c + dc[d];
+			
+			//벽에 닿는 경우 게임 종료(맵의 밖)
+			if(!(next.r >= 0 && next.r < N && next.c >= 0 && next.c < N)) break;
+		
+			//뱀의 머리가 몸통에 닿는 경우 게임 종료
+			if(isBody(next)) break;
+			
+			//뱀 머리 이동
+			snake.addFirst(next);
+			if(!eatApple()) {
+				//뱀이 사과를 먹지 않았다면 꼬리 이동
+				snake.removeLast();
+			}
+
+			//이동방향 변경
+			//현재 시간에 변경할 방향 정보가 있는지 확인, 있다면 현재 방향 정보를 바꿔준다.
+			if(moveInfoMap.containsKey(counter)) {
+				switch(moveInfoMap.get(counter)) {
+				case 'L':
+					d--;
+					if(d == -1) d = 3;
+					break;
+				case 'D':
+					d++;
+					if(d == 4) d = 0;
+					break;
+				}
+				moveInfoMap.remove(counter);
+			}
+			
+			//printMap();
+			counter++;
+		}
+	}
+	
+	//뱀이 현재 사과를 먹었는지 확인하는 함수, 먹었으면 true 반환하고 apples 맵에서 해당 위치 사과 제거
+	private static boolean eatApple() {
+		Point head = snake.getFirst();
+		if(apples[head.r][head.c]) {
+			apples[head.r][head.c] = false;
+			return true;
+		}
+		else return false;
+	}
+	
+	//현재 뱀의 머리 위치가 몸통에 닿았는지 확인
+	private static boolean isBody(Point next) {
+		Point body = null;
+		
+		for(int i=1; i<snake.size(); i++) {
+			body = snake.get(i);
+			if(body.r == next.r && body.c == next.c) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	private static void printMap() {
 		for(int i = 0; i < N; i++) {
-			if(i == 0 || i == N -1) {
-				for(int j = 0; j < N; j++) {
-					map[i][j] = -1;
+			for(int j = 0; j < N; j++) {
+				boolean isSnake = false;
+				for(int z=0; z<snake.size(); z++) {
+					if(snake.get(z).r == i && snake.get(z).c == j) {
+						System.out.print("* ");
+						isSnake = true;
+						break;
+					}
 				}
-			}
-			else {
-				map[i][N - 1] = -1;
-				map[i][0] = -1;
-			}
-		}
-		
-		map[1][1] = 1; //뱀 > 0;
-		
-		K = sc.nextInt();
-		for(int i = 0; i < K; i++) {
-			map[sc.nextInt()][sc.nextInt()] = -2; //사과 = -2
-		}
-		
-		L = sc.nextInt();
-		for(int i = 0; i < L; i++) {
-			XC.put(sc.nextInt(), sc.next());
-		}
-		
-		sc.close();
-		
-		cnt = 0;
-		d = 3;
-		play(1, 1, 1, 1);
-		
-		System.out.println(cnt);
-	}
-	
-	static void play(int hx, int hy, int tx, int ty) {	
-		cnt++;
-		
-		//hx: head x, hy: head y, tx: tail x, ty: tail y
-		int chx = hx;
-		int chy = hy;
-		int ctx = tx;
-		int cty = ty;
-		
-		int nhx = chx + dx[d];
-		int nhy = chy + dy[d];
-		int ntx = ctx;
-		int nty = cty;
 				
-		//다음 진행할 곳이 벽이거나 자신의 몸이면 종료
-		if(map[nhy][nhx] == -1 || map[nhy][nhx] > 0) {
-			return;
-		}
-		
-		//뱀의 이동 예
-		// tail 1 2 3 head
-		// tail 1 2 3 4 head
-		// tail 0 2 3 4 5 head
-		// tail 0 0 3 4 5 6 head
-		
-		boolean getApple = false;
-		
-		//사과를 먹은 경우
-		if(map[nhy][nhx] == -2) {
-			getApple = true;
-		}
-			
-		//사과를 먹든 먹지 않든 머리는 앞으로 이동
-		map[nhy][nhx] = map[chy][chx] + 1; //현재 head 보다 1 증가 시킨다. 꼬리 위치를 옮기게 될 경우 위치를 찾기위해 (이동할 꼬리의 위치는 항상 현재 꼬리의 +1일것)
-		
-		//사과를 먹지 않은 경우, 머리 앞으로, 꼬리는 줄어든다. (바로 앞의 꼬리 위치를 따라간다.)
-		if(!getApple) {
-			int ctv = map[cty][ctx]; //현재 꼬리 위치의 값
-			map[cty][ctx] = 0;
-			Pt ntpt = findNextTail(ctx, cty, ctv);
-			//꼬리 위치 변경
-			if(ntpt != null) {
-				ntx = ntpt.x;
-				nty = ntpt.y;
-			}
-		}
-		
-		//printMap();
-
-		//다음 진행에 방향을 바꾼다. 
-		if(XC.containsKey(cnt)) {
-			changeDir(XC.get(cnt));
-		}
-		
-		play(nhx, nhy, ntx, nty);
-	}
-	
-	static void changeDir(String LD) {
-		switch(d) {
-		case 0:
-			if(LD.equals("L")){
-				d = 2;
-			}
-			else {
-				d = 3;
-			}
-			break;
-		case 1: 
-			if(LD.equals("L")){
-				d = 3;
-			}
-			else {
-				d = 2;
-			}
-			break;
-		case 2:
-			if(LD.equals("L")){
-				d = 1;
-			}
-			else {
-				d = 0;
-			}
-			break;
-		case 3:
-			if(LD.equals("L")){
-				d = 0;
-			}
-			else {
-				d = 1;
-			}
-			break;
-		}
-	}
-
-	static Pt findNextTail(int cx, int cy, int cv) {
-		//현재 꼬리 위치에서 상하좌우를 보며 다음 꼬리 위치를 찾는다.
-		//현재 꼬리 위치의 값 보다 1 큰 위치가 다음 꼬리 위치
-		for(int i = 0; i < 4; i++) {
-			int nx = cx + dx[i];
-			int ny = cy + dy[i];
-			
-			if(map[ny][nx] == cv + 1) {
-				return new Pt(nx, ny);
-			}
-		}
-		
-		return null;
-	}
-	
-	static void printMap() {
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < N - 1; j++) {
-				if(map[i][j] > 0) {
-					System.out.print("1 ");
-				}
-				else if(map[i][j] == -2) {
-					System.out.print("2 ");
-				}
-				else {
+				if(!isSnake)
 					System.out.print("0 ");
-				}
+				
 			}
+			
 			System.out.println();
 		}
 		System.out.println();
-	}
-	
-	static class Pt{
-		public int x, y;
-		public Pt(int x, int y) {
-			this.x = x;
-			this.y = y;
-		}
 	}
 }
