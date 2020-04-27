@@ -1,59 +1,62 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.StringTokenizer;
 
 public class Main {
-
-	static int N; //시험장 개수
-	static int A[]; //각 시험장 응시자 수
-	static int B; //총 감독관(1명)이 감시할 수 있는 응시자의 수
-	static int C; //부 감독관이 감시할 수 있는 응시자의 수
-	//총 감독관은 시험장 당 1명, 부 감독관은 여러명 가능
-	//필요한 감독관 수는?
-	//?? 총 감독관은 시험장 마다 무조건 한 명이 필요한 것 같은데, 맞는가?
-	//Tip. 시간 초과가 문제임. 인원수가 같은 시험장의 계산을 피한다. 메모라이징
-	static int check[];
-	static long sum; //인원수가 1,000,000 으로 크고 시험장 개수도 1,000,000 으로 크기 때문에 결과 값의 자료형을 크게 잡아야한다.
 	
-	public static void main(String[] args) {
-		check = new int[1000000]; //한 시험장의  인원수 범위 (1~1,000,000)
-		
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		A = new int[N];
-		for(int i = 0; i < N; i++) {
-			A[i] = sc.nextInt();
+	//각 시험장마다 응시생 모두 감시해야할 때, 필요한 감독관 수의 최솟값은?
+	
+	static int N; //1~1,000,000 시험장 개수
+	static int[] As = new int[1000000]; //1~1,000,000 각 시험장 응시자 수
+	//총 감독관은 1명, 부감독 1명 이상
+	static int B; //1~1,000,000 총감독관이 한 시험장에서 감시할 수 있는 응시자 수
+	static int C; //1~1,000,000 부감독관이 한 시험장에서 감시할 수 있는 응시자 수
+	static long cnt = 0;
+	static HashMap<Integer, Integer> mem = new HashMap<Integer, Integer>();
+	
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		N = Integer.parseInt(br.readLine());
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		for(int i=0;i<N;i++) {
+			As[i] = Integer.parseInt(st.nextToken());
 		}
-		B = sc.nextInt();
-		C = sc.nextInt();
-		sc.close();
+		st = new StringTokenizer(br.readLine());
+		B = Integer.parseInt(st.nextToken());
+		C = Integer.parseInt(st.nextToken());
+		br.close();
 		
-		getSum();
-		System.out.println(sum);
+		solution();
+		System.out.println(cnt);
 	}
-
-	private static void getSum() {
+	
+	//각 시험장 마다 총감독관은 무조건 한 명 있어야하는듯
+	private static void solution() {
+		int temp = 0;
 		
-		int rest;
-		int temp_sum = 0;
 		for(int i = 0; i < N; i++) {
-			rest = 0;
-			temp_sum = 0;
+			int A = As[i];
+			temp = 0;
 			
-			int num = A[i];
-			if(check[num - 1] > 0) {
-				sum += check[num - 1];
+			if(mem.containsKey(A)) {
+				cnt += mem.get(A);
 				continue;
 			}
+				
+			//총 감독관 할당량 제거
+			int rest = A-B;
+			temp++;
 			
-			rest = num - B;
-			temp_sum++;
-			
+			//남은 인원은 부감독관들에게 분배
 			while(rest > 0) {
-				rest -= C;
-				temp_sum++;
+				rest = rest-C;
+				temp++;
 			}
 			
-			check[num - 1] = temp_sum;
-			sum += temp_sum;
+			mem.put(A, temp);
+			cnt += temp;
 		}
 	}
 }
