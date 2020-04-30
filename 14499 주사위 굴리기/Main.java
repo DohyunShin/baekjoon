@@ -1,201 +1,124 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class Main {
-
-	static int N; //맵 세로
-	static int M; //맵 가로
-	static int x, y; //주사위 좌표
-	//주의 : x y(0 ≤ x ≤ N-1, 0 ≤ y ≤ M-1) 문제에서 제시됨
-	//x가 가로(열)가 아니다.
-	static int K; //명령 개수
-	static int dice[]; //주사위 , index: 주사위의 넘버링, value: 주사우의 값
-	static int diceState[]; //주사위 상태, 면의 위치에 따른 주사위 넘버링 상태, index: 면의 위치, value: 주사위 넘버링
-	//면의 위치
-	//  2
-	//4 1 3 
-	//  5
-	//  6
-	//1: 위, 6: 아래, 4: 왼, 3: 오른쪽, 2: 뒤, 5: 앞
-	//현재 윗면을 가리키는 주사위의 넘버를 찾는 경우 활용
-	final static int BOTTOM_INDEX = 0;
-	final static int TOP_INDEX = 5;
-	static int map[][];
-	static int cmd[]; //1: 동, 2: 서, 3: 북, 4: 남 
-	static int dy[] = {1, -1, 0, 0};
-	static int dx[] = {0, 0, -1, 1};
+	//맵 0 -> 주사위 바닥면 수를 맵에 복사
+	//맵 0X -> 맵 수를 주사위 바닥면에 복사 -> 맵 0
+	//이동할때마다 상단에 쓰여있는 값은?
+	//맵 바깥으로 이동하면 무시, 출력 X
+	//맵 0~10, 주사위 시작 위치 0
+	static int N; //세로 1~20
+	static int M; //가로 1~20
+	static int cr=0; //주사위 현재 위치 0~N-1
+	static int cc=0; //주시위 현재 위치 0~M-1
+	static int K; //명령 개수 1~1,000
+	static int[][] map = new int[20][20];
+	static int d; //이동방향 동:1, 서:2, 북:3, 남:4
+	static int[] dr = {0,0,-1,1};
+	static int[] dc = {1,-1,0,0};
+	static StringBuilder sb;
+	/*
+	 *   1
+	 * 3 0 2
+	 *   4
+	 *   5
+	 */
+	static int[] status = new int[6];
 	
-	public static void main(String[] args) {
-		
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		M = sc.nextInt();
-		x = sc.nextInt();
-		y = sc.nextInt();
-		K = sc.nextInt();
-		
-		map = new int[N][M];
-		dice = new int[6];
-		diceState = new int[6];
-		for(int i = 0; i < 6; i++) {
-			diceState[i] = i;
-		}
-		cmd = new int[K];
-		
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < M; j++) {
-				map[i][j] = sc.nextInt();
+	public static void main(String[] args) throws IOException{
+		sb = new StringBuilder();
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		N = Integer.parseInt(st.nextToken());
+		M = Integer.parseInt(st.nextToken());
+		cr = Integer.parseInt(st.nextToken());
+		cc = Integer.parseInt(st.nextToken());
+		K = Integer.parseInt(st.nextToken());
+		for(int i=0;i<N;i++) {
+			st = new StringTokenizer(br.readLine());
+			for(int j=0;j<M;j++) {
+				map[i][j] = Integer.parseInt(st.nextToken());
 			}
 		}
-		
-		for(int i = 0; i < K; i++) {
-			cmd[i] = sc.nextInt();
+		st = new StringTokenizer(br.readLine());
+		for(int i=0;i<K;i++) {
+			d = Integer.parseInt(st.nextToken())-1;
+			solution();
 		}
+		br.close();
 		
-		sc.close();
-		
-		play();
-	}
-
-	
-	private static void play() {
-		for(int i = 0; i < K; i++) {
-			if(changeDicePoint(cmd[i])) {
-				changeDiceState(cmd[i]);
-				
-				//주사위의 값을 맵으로 옮기거나, 맵의 값을 주사위로 옮기거나
-				if(map[x][y] != 0) {
-					dice[diceState[BOTTOM_INDEX]] = map[x][y];
-					map[x][y] = 0;
-				}
-				else {
-					map[x][y] = dice[diceState[BOTTOM_INDEX]];
-				}
-				
-				//현재 주사위 위의 값을 출력
-				System.out.println(dice[diceState[TOP_INDEX]]);
-			}
-		}
+		System.out.println(sb);
 	}
 	
-	//원본
-	//  2
-	//4 1 3
-	//  5
-	//  6
-	
-	// 동
-	//  2
-	//6 4 1
-	//  5
-	//  3
-	
-	
-	//서 
-	//  2
-	//1 3 6
-	//  5
-	//  4
-	
-	//북
-	//  1
-	//4 5 3
-	//  6 
-	//  2
-	
-	//남
-	//  6
-	//4 2 3
-	//  1 
-	//  5
-	
-	//주사위 이동 명령의 방향에 따라 주사위의 상태를 변경한다.
-	private static void changeDiceState(int d) {
-		int n1, n2, n3, n4, n5, n6;
-		switch(d) {
-		case 1: //동
-			//1, 2, 3, 4, 5, 6 -> 4, 2, 1, 6, 5, 3
-			//1 -> 4
-			//3 -> 1
-			//4 -> 6
-			//6 -> 3
-			n1 = diceState[0];
-			n3 = diceState[2];
-			n4 = diceState[3];
-			n6 = diceState[5];
-			diceState[3] = n1;
-			diceState[0] = n3;
-			diceState[5] = n4;
-			diceState[2] = n6;
-			
-			break;
-		case 2: //서
-			// 1 -> 3
-			// 3 -> 6
-			// 4 -> 1
-			// 6 -> 4
-			n1 = diceState[0];
-			n3 = diceState[2];
-			n4 = diceState[3];
-			n6 = diceState[5];
-			diceState[2] = n1;
-			diceState[5] = n3;
-			diceState[0] = n4;
-			diceState[3] = n6;
-			
-			break;
-		case 3: //북
-			// 1 -> 2
-			// 2 -> 6
-			// 5 -> 1
-			// 6 -> 5
-			n1 = diceState[0];
-			n2 = diceState[1];
-			n5 = diceState[4];
-			n6 = diceState[5];
-			diceState[1] = n1;
-			diceState[5] = n2;
-			diceState[0] = n5;
-			diceState[4] = n6;
-			break;
-		case 4: //남
-			// 1 -> 5
-			// 2 -> 1
-			// 5 -> 6
-			// 6 -> 2
-			n1 = diceState[0];
-			n2 = diceState[1];
-			n5 = diceState[4];
-			n6 = diceState[5];
-			diceState[4] = n1;
-			diceState[0] = n2;
-			diceState[5] = n5;
-			diceState[1] = n6;
-			break;
-		}
-	}
-	
-	private static boolean changeDicePoint(int d) {
-		int nx = x + dx[d-1];
-		int ny = y + dy[d-1];
+	private static void solution() {
+		int nr, nc;
+		nr = cr+dr[d];
+		nc = cc+dc[d];
 		
-		if(nx >= N || ny >= M || ny < 0 || nx < 0) {
-			return false;
+		//주사위가 이동 가능한지 확인
+		if(!(nr>=0 && nr<N && nc>=0 && nc<M)) return;
+		
+		//이동 가능한 경우 이동
+		cr = nr;
+		cc = nc;
+		
+		//주사위 회전
+		rotation();
+		
+		int cn = map[cr][cc];
+		
+		//이동 위치의 지도 번호가 0인 경우, 주사위 바닥면 번호 복사
+		if(cn == 0) {
+			map[cr][cc] = status[5];
 		}
+		//이동 위치의 지도 번호가 0이 아닌 경우, 현재 지도 번호를 주사위 바닥면에 복사하고 지도 번호 0
 		else {
-			x = nx;
-			y = ny;
-			return true;
+			status[5] = cn;
+			map[cr][cc] = 0;
 		}
+		
+		//현재 주사위 윗면 번호
+		if(sb.length() > 0) sb.append("\n"+status[0]);
+		else sb.append(status[0]);
 	}
 	
-	private static void printDiceState() {
-		for(int i = 0; i < 6; i++) {
-			System.out.print(diceState[i] + " ");
+	private static void rotation() {
+		int temp;
+		switch(d) {
+		case 0:
+			//동 : 0->2, 2->5, 5->3, 3->0
+			temp = status[0];
+			status[0] = status[3];
+			status[3] = status[5];
+			status[5] = status[2];
+			status[2] = temp;	
+			break;
+		case 1:
+			//서 : 0->3, 3->5, 5->2, 2->0
+			temp = status[0];
+			status[0] = status[2];
+			status[2] = status[5];
+			status[5] = status[3];
+			status[3] = temp;
+			break;
+		case 2:
+			//북 : 0->1, 1->5, 5->4, 4->0
+			temp = status[0];
+			status[0] = status[4];
+			status[4] = status[5];
+			status[5] = status[1];
+			status[1] = temp;
+			break;
+		case 3:
+			//남 : 0->4, 4->5, 5->1, 1->0
+			temp = status[0];
+			status[0] = status[1];
+			status[1] = status[5];
+			status[5] = status[4];
+			status[4] = temp;
+			break;
 		}
-		System.out.println();
-		for(int i = 0; i < 6; i++) {
-			System.out.print(dice[i] + " ");
-		}
-		System.out.println();
 	}
 }
