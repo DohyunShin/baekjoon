@@ -4,124 +4,35 @@ import java.io.InputStreamReader;
 import java.util.StringTokenizer;
 
 public class Main {
-	static int N, M;
-	static int[][] map;
-	static final Tec[] tecs = {new Tec1(), new Tec2(), new Tec3(), new Tec4(), new Tec5()};
-	static int max = 0;
 	
-	static class Tec{
-		int rotationCnt;
-		int[][] dr;
-		int[][] dc;
-	}
-	//ㅡ
-	static class Tec1 extends Tec{
-		public Tec1() {
-			rotationCnt = 2;
-			int[][] temp_dr = {
-					{0,0,0,0},
-					{0,1,1,1}
-			};
-			int[][] temp_dc = {
-					{0,1,1,1},
-					{0,0,0,0}
-			};
-			dr = temp_dr;
-			dc = temp_dc;
-		};
-	}
-	//ㅁ
-	static class Tec2 extends Tec{
-		public Tec2() {
-			rotationCnt = 1;
-			int[][] temp_dr = {
-					{0,0,1,0}
-			};
-			int[][] temp_dc = {
-					{0,1,0,-1}
-			};
-			dr = temp_dr;
-			dc = temp_dc;
-		};
-	}
-	//ㄱ
-	static class Tec3 extends Tec{
-		public Tec3() {
-			rotationCnt = 8;
-			int[][] temp_dr = {
-					{0,1,1,0},
-					{0,-1,0,0},
-					{0,0,1,1},
-					{0,0,0,-1},
-					{0,-1,-1,0},
-					{0,1,0,0},
-					{0,0,-1,-1},
-					{0,0,0,1}
-			};
-			int[][] temp_dc = {
-					{0,0,0,1},
-					{0,0,1,1},
-					{0,1,0,0},
-					{0,1,1,0},
-					{0,0,0,1},
-					{0,0,1,1},
-					{0,1,0,0},
-					{0,1,1,0}
-			};
-			dr = temp_dr;
-			dc = temp_dc;
-		};
-	}
-	//ㄹ
-	static class Tec4 extends Tec{
-		public Tec4() {
-			rotationCnt = 4;
-			int[][] temp_dr = {
-					{0,1,0,1},
-					{0,1,0,1},
-					{0,0,1,0},
-					{0,0,1,0}
-			};
-			int[][] temp_dc = {
-					{0,0,1,0},
-					{0,0,-1,0},
-					{0,-1,0,-1},
-					{0,1,0,1}
-			};
-			dr = temp_dr;
-			dc = temp_dc;
-		};
-	}
-	//ㅜ
-	static class Tec5 extends Tec{
-		public Tec5() {
-			rotationCnt = 4;
-			int[][] temp_dr = {
-					{0,0,1,-1},
-					{0,0,-1,2},
-					{0,1,0,1},
-					{0,0,-1,1}
-			};
-			int[][] temp_dc = {
-					{0,1,0,1},
-					{0,1,0,0},
-					{0,0,1,-1},
-					{0,1,0,1}
-			};
-			dr = temp_dr;
-			dc = temp_dc;
-		};
-	}
+	static int N; //4~500
+	static int M; //4~500
+	static int[][] map = new int[500][500];
+	static boolean[][] visit = new boolean[500][500];
+	static int[] dr = {1,-1,0,0};
+	static int[] dc = {0,0,-1,1};
+	static long max = Long.MIN_VALUE;
+	static int[][] tec_r = {
+			{0,1,0,1}, //ㅏ
+			{0,1,0,1}, //ㅓ
+			{0,0,1,-1}, //ㅜ
+			{0,0,-1,1} //ㅗ
+	};
+	static int[][] tec_c = {
+			{0,0,1,-1}, //ㅏ
+			{0,0,-1,1}, //ㅓ
+			{0,1,0,1}, //ㅜ
+			{0,1,0,1} //ㅗ
+	};	
 	
 	public static void main(String[] args) throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		StringTokenizer st = new StringTokenizer(br.readLine());
 		N = Integer.parseInt(st.nextToken());
 		M = Integer.parseInt(st.nextToken());
-		map = new int[N][M];
-		for(int i = 0; i < N; ++i) {
+		for(int i=0;i<N;i++) {
 			st = new StringTokenizer(br.readLine());
-			for(int j = 0; j < M; ++j) {
+			for(int j=0;j<M;j++) {
 				map[i][j] = Integer.parseInt(st.nextToken());
 			}
 		}
@@ -132,37 +43,54 @@ public class Main {
 	}
 	
 	private static void solution() {
-		for(int r=0;r<N;r++) {
-			for(int c=0;c<M;c++) {
-				tecExecute(r,c);
+		for(int i=0;i<N;i++) {
+			for(int j=0;j<M;j++) {
+				visit[i][j] = true;
+				dfs(i,j,1,map[i][j]);
+				visit[i][j] = false;
+				
+				int nr, nc;
+				long sum;
+				//ㅜ 검사
+				for(int d=0;d<4;d++) {
+					sum = 0;
+					nr=i;
+					nc=j;
+					boolean find = false;
+					for(int t =0;t<4;t++) {
+						nr = nr+tec_r[d][t];
+						nc = nc+tec_c[d][t];
+						
+						if(!(nr>=0&&nr<N&&nc>=0&&nc<M)) break;
+						
+						if(t==3) find = true;
+						sum+=map[nr][nc];
+					}
+					
+					if(find && sum > max) {
+						max = sum;
+					}
+				}
 			}
 		}
 	}
 	
-	private static void tecExecute(int r, int c) {
-		for(int i = 0; i < tecs.length; i++) {
-			Tec tec = tecs[i];
-			for(int j = 0; j < tec.rotationCnt; j++) {
-				int[] dr = tec.dr[j];
-				int[] dc = tec.dc[j];
+	private static void dfs(int r, int c, int depth, long sum) {
+		if(depth == 4) {
+			if(sum > max) max = sum;
+			return;
+		}
 				
-				int nr =r, nc=c;
-				int sum=0;
-				boolean success = true;
-				for(int d = 0; d < 4; d++) {
-					nr += dr[d];
-					nc += dc[d];
-					if(!(nr >=0 && nr < N && nc >=0 && nc < M)) {
-						success = false;
-						break;
-					}
-					sum+=map[nr][nc];
-				}
-				
-				if(success) {
-					if(max < sum) max = sum;
-				}
-			}
+		int nr, nc;
+		for(int d=0;d<4;d++) {
+			nr = r + dr[d];
+			nc = c + dc[d];
+			
+			if(!(nr>=0&&nr<N&&nc>=0&&nc<M) || visit[nr][nc]) continue;
+			
+			visit[nr][nc] = true;
+			dfs(nr,nc,depth+1,sum+map[nr][nc]);
+			visit[nr][nc] = false;
 		}
 	}
 }
