@@ -6,19 +6,18 @@ import java.util.StringTokenizer;
 public class Main {
 	
 	static int N; //1~15
-	static int[] T = new int[15];
-	static int[] P = new int[15];
-	static boolean[] visit = new boolean[15];
-	static int max = 0;
+	static int[] Ts = new int[15]; //1~5
+	static int[] Ps = new int[15]; //1~1,000
+	static long max = Long.MIN_VALUE;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		N = Integer.parseInt(br.readLine());
 		StringTokenizer st = null;
-		for(int i = 0; i < N; i++) {
+		for(int i=0;i<N;i++) {
 			st = new StringTokenizer(br.readLine());
-			T[i] = Integer.parseInt(st.nextToken());
-			P[i] = Integer.parseInt(st.nextToken());
+			Ts[i] = Integer.parseInt(st.nextToken());
+			Ps[i] = Integer.parseInt(st.nextToken());
 		}
 		br.close();
 		
@@ -30,21 +29,24 @@ public class Main {
 		recursive(0, 0);
 	}
 	
-	private static void recursive(int idx, int sum) {
-		if(idx >= N) {
-			if(sum > max)
-				max = sum;
+	private static void recursive(int day, int sum) {
+		if(day >= N) {
+			if(sum > max) max = sum;
 			return;
 		}
 		
-		if(visit[idx]) return;
-		
-		if(idx+T[idx] <= N) {
-			visit[idx] = true;
-			recursive(idx+T[idx], sum+P[idx]);
-			visit[idx] = false;
+		//day에 일을 하는 경우
+		int workPeriod= Ts[day]; //걸리는 시간
+		int endDay = day+workPeriod-1; //끝나는 날짜
+		//끝나는 날짜가 퇴사일을 넘어가면 일할 수 없다.
+		if(endDay >= N) {
+			if(sum > max) max = sum;	
 		}
-		
-		recursive(idx+1, sum);
+		else {
+			recursive(endDay+1, sum+Ps[day]);	
+		}
+
+		//day에 일을 하지 않는 경우
+		recursive(day+1, sum);
 	}
 }
