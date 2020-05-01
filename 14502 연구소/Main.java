@@ -1,132 +1,101 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.StringTokenizer;
 
 public class Main {
-	static int N, M;
-	static int map[][];
-	static int dx[] = {0, 0, -1, 1};
-	static int dy[] = {-1, 1, 0, 0};
-	static int max = 0;
+	static int N, M; //3~8
+	static int[][] map = new int[8][8];
+	static int max = Integer.MIN_VALUE;
+	static int emptyCnt = 0;
+	static int[] dr = {-1,1,0,0};
+	static int[] dc = {0,0,-1,1};
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt() + 2;
-		M = sc.nextInt() + 2;
-		map = new int[N][M];
-		
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				map[i][j] = sc.nextInt();
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		N = Integer.parseInt(st.nextToken());
+		M = Integer.parseInt(st.nextToken());
+		for(int i=0;i<N;i++) {
+			st = new StringTokenizer(br.readLine());
+			for(int j=0;j<M;j++) {
+				int input = Integer.parseInt(st.nextToken());
+				if(input == 0) emptyCnt++;
+				map[i][j] = input;
 			}
 		}
+		br.close();
 		
-		//맵 패딩처리
-		for(int i = 0; i < N; i++) {
-			if(i == 0 || i == N - 1) {
-				for(int j = 0; j < M; j++) {
-					map[i][j] = 1;
-				}
-			}
-			map[i][0] = 1;
-			map[i][M-1] = 1;
-		}
-		sc.close();
-	
 		solution();
-		
 		System.out.println(max);
 	}
 	
 	private static void solution() {
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				if(map[i][j] == 0) {
-					int tempMap[][] = new int[N][M];
-					for(int z = 0; z < N; z++) {
-						tempMap[z] = map[z].clone();
-					}
-					build(tempMap, i, j, 0);
-				}
-			}
-		}
+		recursive(0,0,0,emptyCnt);
 	}
 	
-	private static void build(int tempMap[][], int r, int c, int cnt) {
-		
-		//기둥 만들기
-		tempMap[r][c] = 1;
-		cnt++;
-		if(cnt == 3) {	
-			int sum = explode(tempMap);
-			if(sum > max) {
-				max = sum;
+	private static void recursive(int sr, int sc, int wallCnt, int curEmptyCnt) {
+		if(wallCnt == 3) {
+			//바이러스 확장
+			int[][] curMap = map.clone();
+			for(int i = 0; i < N; i++) {
+				curMap[i] = map[i].clone();
 			}
+			Queue<Point> q = new LinkedList<Point>();
+			for(int r=0;r<N;r++) {
+				for(int c=0;c<M;c++) {
+					if(curMap[r][c] != 2) continue;
+					q.add(new Point(r,c));
+				}
+			}
+			bfs(curMap, q, curEmptyCnt);			
 			return;
 		}
 		
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				if(tempMap[i][j] == 0) {
-					int tempMap2[][] = new int[N][M];
-					for(int z = 0; z < N; z++) {
-						tempMap2[z] = tempMap[z].clone();
-					}
-					build(tempMap2, i, j, cnt);
-				}
-			}
+		if(!(sr>=0&&sr<N&&sc>=0&&sc<M)) return;
+		
+		int nr = sr;
+		int nc = sc+1;
+		if(nc >= M) {
+			nc = 0;
+			nr++;
 		}
+		
+		if(map[sr][sc] == 0) {
+			//벽을 세우는 경우
+			map[sr][sc] = 1;
+			recursive(nr,nc,wallCnt+1, curEmptyCnt-1);
+			map[sr][sc] = 0;
+		}
+		
+		//벽을 세우지 않는 경우
+		recursive(nr,nc,wallCnt, curEmptyCnt);
 	}
 	
-	private static void explodeEx(int tempMap[][], boolean visit[][], int r, int c) {
-		for(int i = 0; i < 4; i++) {
-			int nr = r + dy[i];
-			int nc = c + dx[i];
+	static class Point{
+		int r,c;
+		public Point(int r, int c) {this.r=r; this.c=c;}
+	}
+	
+	private static void bfs(int[][] curMap, Queue<Point> q, int curEmptyCnt) {
+		while(!q.isEmpty()) {
+			Point v = q.poll();
 			
-			if(tempMap[nr][nc] != 1 && visit[nr][nc] == false) {
-				visit[nr][nc] = true;
-				tempMap[nr][nc] = 2;
-				explodeEx(tempMap, visit, nr, nc);
+			int nr, nc;
+			for(int d=0;d<4;d++) {
+				nr = v.r+dr[d];
+				nc = v.c+dc[d];
+				
+				if(!(nr>=0&&nr<N&&nc>=0&&nc<M) || curMap[nr][nc] != 0) continue;
+				
+				curMap[nr][nc] = 2;
+				curEmptyCnt--;
+				q.add(new Point(nr,nc));
 			}
 		}
+		
+		if(curEmptyCnt > max) max = curEmptyCnt;
 	}
-	
-	//네방향 확산 및 계산
-	private static int explode(int tempMap[][]) {
-		boolean visit[][] = new boolean[N][M];
-		
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				if(tempMap[i][j] == 2) {
-					visit[i][j] = true;
-					
-					explodeEx(tempMap, visit, i, j);
-				}
-			}
-		}
-		
-		//printMap(tempMap);
-		
-		//계산
-		int sum = 0;
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				if(tempMap[i][j] == 0) {
-					sum++;
-				}
-			}
-		}
-		
-		return sum;
-	}
-
-	
-	private static void printMap(int printMap[][]) {
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				System.out.print(printMap[i][j] + " ");
-			}
-			System.out.println();
-		}
-		System.out.println();
-	}
-
 }
