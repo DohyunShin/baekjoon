@@ -1,105 +1,110 @@
-import java.util.HashMap;
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class Main {
-
-	/*
-	 * 1부터 N까지 선택을 하고 안하고 dp 로 깊이는 N/2만큼
-	 * N/2 깊이에서 멈춰서 선택받은 곳 까리의 대각선의 합과 선택받지 못한 곳 끼리의 대각선의 합의 차를 구한다.
-	 * 구한 정답과 선택 받은 모든 곳을 매칭하여 메모라이징한다.
-	 * 대각선의 합
-	 */
-	static int N;
-	static int M[][];
-	static int min = 99999;
-	static HashMap<String, Integer> check = new HashMap<String, Integer>();
+	static int N; //4~20
+	static int[][] map = new int[20][20];
+	static boolean[] team = new boolean[20];
+	static int min = Integer.MAX_VALUE;
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		M = new int[N][N];
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < N; j++) {
-				M[i][j] = sc.nextInt();
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		N = Integer.parseInt(br.readLine());
+		StringTokenizer st = null;
+		for(int i=0;i<N;i++) {
+			st = new StringTokenizer(br.readLine());
+			for(int j=0;j<N;j++) {
+				map[i][j] = Integer.parseInt(st.nextToken());
 			}
 		}
-		sc.close();
+		br.close();
 		
 		solution();
-		
 		System.out.println(min);
 	}
 	
 	private static void solution() {
-		dp(0, 0, new boolean[N]);
+		//permutation(0, 0);
+		combination();
 	}
 	
-	private static void dp(int targetIndex, int depth, boolean selected[]) {
-		if(depth >= N/2) {
-			String selectedStr = "";
-			for(int i = 0; i < selected.length; i++) {
-				if(selected[i]) {
-					selectedStr += Integer.toString(i);
+	private static void permutation(int cnt, int idx) {
+		if(cnt == N/2) {
+			//계산
+			int sumA = 0;
+			int sumB = 0;
+			for(int j = 0; j < N; j++) {
+				if(team[j]) {
+					for(int z = j+1; z < N; z++) {
+						if(team[z]) {
+							sumA += map[j][z];
+							sumA += map[z][j];
+						}
+					}
+				}
+				else {
+					for(int z = j+1; z < N; z++) {
+						if(!team[z]) {
+							sumB += map[j][z];
+							sumB += map[z][j];
+						}
+					}
 				}
 			}
 			
-			if(!check.containsKey(selectedStr)) {
-				//합 계산
-				int result = calculate(selected);
-				
-				//min 변경
-				if(min > result) {
-					min = result;
-				}
-				
-				//check
-				check.put(selectedStr, result);
-			}
+			int diff = Math.abs(sumA-sumB);
+			if(diff < min) min = diff;
 			return;
 		}
 		
-		if(targetIndex >= N) {
-			return;
+		if(cnt > N/2 || idx >= N) return;
+		
+		for(int i = idx; i < N; i++) {
+			team[i] = true;
+			permutation(cnt+1, i+1);
+			team[i] = false;
 		}
-		
-		//targetIndex 를 선택
-		boolean nextSelected[] = selected.clone();
-		nextSelected[targetIndex] = true;
-		dp(targetIndex + 1, depth + 1, nextSelected);
-		
-		//targetIndex 를 선택 안함
-		dp(targetIndex + 1, depth, selected);
 	}
 	
-	private static int calculate(boolean selected[]) {
-		int selectedSum = 0;
-		int unSelectedSum = 0;
+	private static void combination() {
+		//N개 중 N/2개를 뽑는 조합
+		int total = 1<<N;
 		
-		for(int i = 0; i < selected.length - 1; i++) {
-			//선택된 것들끼리의 대각선 합
-			if(selected[i]) {
-				for(int j = i + 1; j < selected.length; j++) {
-					if(selected[j]) {
-						selectedSum += M[i][j];
-						selectedSum += M[j][i];
-					}
-				}	
+		for(int i = 0; i < total; i++) {
+			if(Integer.bitCount(i) != N/2) continue;
+			
+			team = new boolean[20];
+			
+			for(int j = 0; j < N; j++) {
+				if((i&(1<<j)) != 0) team[j] = true;
 			}
-			//선택안된 것들 끼리의 대각선 합
-			else {
-				for(int j = i + 1; j < selected.length; j++) {
-					if(!selected[j]) {
-						unSelectedSum += M[i][j];
-						unSelectedSum += M[j][i];
+			
+			//계산
+			int sumA = 0;
+			int sumB = 0;
+			for(int j = 0; j < N; j++) {
+				if(team[j]) {
+					for(int z = j+1; z < N; z++) {
+						if(team[z]) {
+							sumA += map[j][z];
+							sumA += map[z][j];
+						}
 					}
-				}	
+				}
+				else {
+					for(int z = j+1; z < N; z++) {
+						if(!team[z]) {
+							sumB += map[j][z];
+							sumB += map[z][j];
+						}
+					}
+				}
 			}
+			
+			int diff = Math.abs(sumA-sumB);
+			if(diff < min) min = diff;
 		}
-		
-		int upper = selectedSum > unSelectedSum ? selectedSum : unSelectedSum;
-		int lower = selectedSum < unSelectedSum ? selectedSum : unSelectedSum;
-		
-		//큰거에서 작은거 빼준다.
-		return upper - lower;
 	}
 }
