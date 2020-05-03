@@ -4,23 +4,24 @@ import java.io.InputStreamReader;
 import java.util.StringTokenizer;
 
 public class Main {
-	
+	//최댓값, 최소값 출력
+	//결과값 범위 -10억~10억
 	static int N; //2~11
-	static int[] digits = new int[11];
-	static int[] opCnts = new int[4];
-	static long min = Long.MAX_VALUE;
+	static int[] As = new int[11]; //각 1~100
+	static int[] Ops = new int[4]; //연산자 개수 0:+, 1:-, 2:*, 3:/
 	static long max = Long.MIN_VALUE;
+	static long min = Long.MAX_VALUE;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		N = Integer.parseInt(br.readLine());
 		StringTokenizer st = new StringTokenizer(br.readLine());
-		for(int i = 0; i < N; i++) {
-			digits[i] = Integer.parseInt(st.nextToken());
+		for(int i=0;i<N;i++) {
+			As[i] = Integer.parseInt(st.nextToken());
 		}
 		st = new StringTokenizer(br.readLine());
-		for(int i = 0; i < 4; i++) {
-			opCnts[i] = Integer.parseInt(st.nextToken());
+		for(int i=0;i<4;i++) {
+			Ops[i] = Integer.parseInt(st.nextToken());
 		}
 		br.close();
 		
@@ -30,41 +31,38 @@ public class Main {
 	}
 	
 	private static void solution() {
-		recursive(0, 1, digits[0]);
+		permutation(0, As[0], 1);
 	}
 	
-	private static void recursive(int opCnt, int numIdx, int res) {
-		if(opCnt == N-1) {
+	private static void permutation(int cnt, long res, int idx) {
+		if(cnt == N-1) {
 			if(res > max) max = res;
 			if(res < min) min = res;
 			return;
 		}
+		if(cnt > N-1 || idx >= N) return;
 		
-		if(opCnt > N-1 || numIdx >= N) return;
-		
-		for(int i = 0; i < 4; i++) {
-			if(opCnts[i] <= 0) continue;
-			
-			opCnts[i]--;
-			recursive(opCnt+1, numIdx+1, calculate(numIdx, res, i));
-			opCnts[i]++;
-		}		
+		for(int i=0;i<4;i++) {
+			if(Ops[i] != 0) {
+				Ops[i]--;
+				permutation(cnt+1, calcultae(res, As[idx], i), idx+1);
+				Ops[i]++;
+			}
+		}
 	}
 	
-	private static int calculate(int numIdx, int res, int op) {
-		int cur = digits[numIdx];
-		
+	private static long calcultae(long res, int num, int op) {
 		switch(op) {
 		case 0:
-			return res + cur;
+			return res+num;
 		case 1:
-			return res - cur;
+			return res-num;
 		case 2:
-			return res * cur;
+			return res*num;
 		case 3:
-			return res / cur;
+			return res/num;
+		default:
+			return 0;
 		}
-		
-		return 0;
 	}
 }
