@@ -1,353 +1,147 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class Main {
-	static int N, M;
-	static int map[][];
-	static int cctvType[] = new int[8];
-	static int cctvX[] = new int[8];
-	static int cctvY[] = new int[8];
+	static class Cctv{
+		int t, r, c, dCnt;
+		public Cctv() {}
+		public Cctv(int t, int r, int c, int dCnt) {
+			this.t = t;
+			this.r = r;
+			this.c = c;
+			this.dCnt = dCnt;
+		}
+	}
+	static int N,M;//1~8
+	static int[][] map = new int[8][8];
+	static int min = Integer.MAX_VALUE;
+	static Cctv[] cctvs = new Cctv[8];
 	static int cctvCnt = 0;
-	static int min = 999999;
+	static int[] dr = {-1,1,0,0};
+	static int[] dc = {0,0,-1,1};
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt() + 2;
-		M = sc.nextInt() + 2;
-		
-		map = new int[N][M];
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				int input = sc.nextInt();
-				if(input > 0 && input <= 5) {
-					cctvType[cctvCnt] = input;
-					cctvX[cctvCnt] = j;
-					cctvY[cctvCnt] = i;
-					cctvCnt++;
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		N = Integer.parseInt(st.nextToken());
+		M = Integer.parseInt(st.nextToken());
+		int input;
+		for(int i=0;i<N;i++) {
+			st = new StringTokenizer(br.readLine());
+			for(int j=0;j<M;j++) {
+				input = Integer.parseInt(st.nextToken());
+				if(input >= 1 && input <= 5) {
+					int dCnt;
+					if(input == 1 || input == 3 || input == 4) dCnt = 4;
+					else if(input == 2) dCnt = 2;
+					else dCnt = 1; //5
+					cctvs[cctvCnt++] = new Cctv(input-1, i, j, dCnt);
 				}
-				map[i][j] = input;
-			}
-		}
-		
-		//패딩처리
-		for(int i = 0; i < N; i++) {
-			if(i == 0 || i == N - 1) {
-				for(int j = 0; j < M; j++) {
-					map[i][j] = 6;
+				else {
+					map[i][j] = input;	
 				}
 			}
-			else {
-				map[i][0] = 6;
-				map[i][M-1] = 6;
-			}
 		}
-		sc.close();
+		br.close();
 		
 		solution();
 		System.out.println(min);
 	}
 	
 	private static void solution() {
-		int copyMap[][] = map.clone();
-		for(int i = 0; i < map.length; i++) {
-			copyMap[i] = map[i].clone();
-		}
-		
-		if(cctvCnt == 0) {
-			calculate(copyMap);
+		recursive(0, map);
+	}
+	
+	//cctv 하나씩 타입에 따라 회전 개수 만큼 방향 돌려가면서 확인한다.
+	private static void recursive(int idx, int[][] curMap) {		
+		if(idx == cctvCnt) {
+			int cnt = 0;
+			for(int i=0;i<N;i++) {
+				for(int j=0;j<M;j++) {
+					if(curMap[i][j] == 0) cnt++;
+				}
+			}
+			
+			if(cnt < min) min = cnt;
 			return;
 		}
 		
-		dp(copyMap, 0);
-	}
-	
-	private static void dp(int dpMap[][], int cctvNum) {
-		if(cctvNum >= cctvCnt) {
-			//printMap(dpMap);
-			calculate(dpMap);
-			return;
+		int[][] save = curMap.clone();
+		for(int i=0;i<N;i++) {
+			save[i] = curMap[i].clone();
 		}
 		
-		for(int i = 0; i < 4; i++) {
-			
-			int copyMap[][] = dpMap.clone();
-			for(int j = 0; j < dpMap.length; j++) {
-				copyMap[j] = dpMap[j].clone();
-			}
-			
-			watch(copyMap, cctvNum, i);
-			dp(copyMap, cctvNum + 1);
-		}
-	}
-	
-	private static void watch(int watchMap[][], int cctvNum, int dir) {
-		int type = cctvType[cctvNum];
-		int x = cctvX[cctvNum];
-		int y = cctvY[cctvNum];
-		int nx, ny;
-		
-		if(type == 1) {
-			int dx = 0;
-			int dy = 0;
-			
-			if(dir == 0) {
-				dx = 0;
-				dy = -1;
-			}
-			else if(dir == 1) {
-				dx = 1;
-				dy = 0;
-			}
-			else if(dir == 2) {
-				dx = 0;
-				dy = 1;
-			}
-			else if(dir == 3) {
-				dx = -1;
-				dy = 0;
-			}
-			
-			nx = x;
-			ny = y;
-			
-			while(true) {
-				nx += dx;
-				ny += dy;
-				
-				if(watchMap[ny][nx] == 0) {
-					watchMap[ny][nx] = 7; //# 대신
-				}
-				else if(watchMap[ny][nx] == 7) {
-					continue;
-				}
-				else if(watchMap[ny][nx] == 6) {
-					break;
-				}
-				else {
-					//다른 카메라가 있는 경우 지나간다.
-				}
-			}
-		}
-		else if(type == 2) {
-			int dx = 0;
-			int dy = 0;
-			
-			if(dir == 0 || dir == 2) {
-				//위 -> 아래 순서
-				for(int i = 0; i < 2; i++) {
-					dy = i == 0? 1 : -1;
-					dx = 0;
-					
-					nx = x;
-					ny = y;
-					
-					while(true) {
-						nx += dx;
-						ny += dy;
-						
-						if(watchMap[ny][nx] == 0) {
-							watchMap[ny][nx] = 7; //# 대신
-						}
-						else if(watchMap[ny][nx] == 7) {
-							continue;
-						}
-						else if(watchMap[ny][nx] == 6) {
-							break;
-						}
-						else {
-							//다른 카메라가 있는 경우 지나간다.
-						}
-					}
-				}
-			}
-			else if(dir == 1 || dir == 3) {
-				//오른쪽 -> 왼쪽 순서
-				for(int i = 0; i < 2; i++) {
-					dx = i == 0? 1 : -1;
-					dy = 0;
-					
-					nx = x;
-					ny = y;
-					
-					while(true) {
-						nx += dx;
-						ny += dy;
-						
-						if(watchMap[ny][nx] == 0) {
-							watchMap[ny][nx] = 7; //# 대신
-						}
-						else if(watchMap[ny][nx] == 7) {
-							continue;
-						}
-						else if(watchMap[ny][nx] == 6) {
-							break;
-						}
-						else {
-							//다른 카메라가 있는 경우 지나간다.
-						}
-					}
-				}
-			}
-		}
-		else if(type == 3) {
-			int dx[] = new int[2];
-			int dy[] = new int[2];
-			
-			if(dir == 0) {
-				dx[0] = 0;
-				dy[0] = -1;
-				dx[1] = 1;
-				dy[1] = 0;
-			}
-			else if(dir == 1) {
-				dx[0] = 1;
-				dy[0] = 0;
-				dx[1] = 0;
-				dy[1] = 1;
-			}
-			else if(dir == 2) {
-				dx[0] = 0;
-				dy[0] = 1;
-				dx[1] = -1;
-				dy[1] = 0;
-			}
-			else if(dir == 3) {
-				dx[0] = -1;
-				dy[0] = 0;
-				dx[1] = 0;
-				dy[1] = -1;
-			}
-			
-			for(int i = 0; i < 2; i++) {
-				nx = x;
-				ny = y;
-				
-				while(true) {
-					nx += dx[i];
-					ny += dy[i];
-					
-					if(watchMap[ny][nx] == 0) {
-						watchMap[ny][nx] = 7; //# 대신
-					}
-					else if(watchMap[ny][nx] == 7) {
-						continue;
-					}
-					else if(watchMap[ny][nx] == 6) {
-						break;
-					}
-					else {
-						//다른 카메라가 있는 경우 지나간다.
-					}
-				}
-			}
-		}
-		else if(type == 4) {
-			int dx[] = new int[3];
-			int dy[] = new int[3];
-			
-			if(dir == 0) {
-				dx[0] = 0;
-				dy[0] = -1;
-				dx[1] = 1;
-				dy[1] = 0;
-				dx[2] = -1;
-				dy[2] = 0;
-			}
-			else if(dir == 1) {
-				dx[0] = 1;
-				dy[0] = 0;
-				dx[1] = 0;
-				dy[1] = 1;
-				dx[2] = 0;
-				dy[2] = -1;
-			}
-			else if(dir == 2) {
-				dx[0] = 0;
-				dy[0] = 1;
-				dx[1] = -1;
-				dy[1] = 0;
-				dx[2] = 1;
-				dy[2] = 0;
-			}
-			else if(dir == 3) {
-				dx[0] = -1;
-				dy[0] = 0;
-				dx[1] = 0;
-				dy[1] = 1;
-				dx[2] = 0;
-				dy[2] = -1;
-			}
-			
-			for(int i = 0; i < 3; i++) {
-				nx = x;
-				ny = y;
-				
-				while(true) {
-					nx += dx[i];
-					ny += dy[i];
-					
-					if(watchMap[ny][nx] == 0) {
-						watchMap[ny][nx] = 7; //# 대신
-					}
-					else if(watchMap[ny][nx] == 7) {
-						continue;
-					}
-					else if(watchMap[ny][nx] == 6) {
-						break;
-					}
-					else {
-						//다른 카메라가 있는 경우 지나간다.
-					}
-				}
-			}
-		}
-		else if(type == 5) {
-			int dx[] = {0, 0, -1, 1};
-			int dy[] = {-1, 1, 0, 0};
-			
-			for(int i = 0; i < 4; i++) {
-				nx = x;
-				ny = y;
-				
-				while(true) {
-					nx += dx[i];
-					ny += dy[i];
-					
-					if(watchMap[ny][nx] == 0) {
-						watchMap[ny][nx] = 7; //# 대신
-					}
-					else if(watchMap[ny][nx] == 7) {
-						continue;
-					}
-					else if(watchMap[ny][nx] == 6) {
-						break;
-					}
-					else {
-						//다른 카메라가 있는 경우 지나간다.
-					}
-				}
+		for(int d=0;d<cctvs[idx].dCnt;d++) {
+			look(idx, d, curMap);
+			recursive(idx+1, curMap);
+			curMap = save.clone();
+			for(int i=0;i<N;i++) {
+				curMap[i] = save[i].clone();
 			}
 		}
 	}
 	
-	private static void calculate(int calMap[][]) {
-		int cnt = 0;
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				if(calMap[i][j] == 0) {
-					cnt++;
-				}
-			}
-		}
+	private static void lookEx(int cr, int cc, int d, int[][] curMap) {
+		int nr = cr;
+		int nc = cc;
 		
-		if(cnt < min) {
-			//printMap(calMap);
-			min = cnt;
+		while(true) {
+			nr = nr+dr[d];
+			nc = nc+dc[d];
+			if(!(nr>=0 && nr<N && nc>=0 && nc<M) || curMap[nr][nc]==6) break;
+			curMap[nr][nc] = 7;
 		}
 	}
-	private static void printMap(int printMap[][]) {
-		for(int i = 1; i < N - 1; i++) {
-			for(int j = 1; j < M - 1; j++) {
-				System.out.print(printMap[i][j] + " ");
+	
+	private static void look(int idx, int d, int[][] curMap) {
+		int type = cctvs[idx].t;
+		int cr = cctvs[idx].r;
+		int cc = cctvs[idx].c;
+		
+		curMap[cr][cc] = 7;
+		
+		
+		
+		//위
+		if((type==0&&d==0) || 
+			(type==1&&d==0) || 
+			(type==2&&(d==0||d==3)) || 
+			(type==3&&(d==0||d==1||d==3)) ||
+			(type==4)) {
+			lookEx(cr,cc,0,curMap);
+		}
+		//아래
+		if((type==0&&d==1) || 
+			(type==1&&d==0) || 
+			(type==2&&(d==1||d==2)) || 
+			(type==3&&(d==1||d==2||d==3)) ||
+			(type==4)) {
+			lookEx(cr,cc,1,curMap);
+		}
+		//왼
+		if((type==0&&d==2) || 
+			(type==1&&d==1) || 
+			(type==2&&(d==2||d==3)) || 
+			(type==3&&(d==0||d==2||d==3)) ||
+			(type==4)) {
+			lookEx(cr,cc,2,curMap);
+		}
+		//오른
+		if((type==0&&d==3) || 
+			(type==1&&d==1) || 
+			(type==2&&(d==0||d==1)) || 
+			(type==3&&(d==0||d==1||d==2)) ||
+			(type==4)) {
+			lookEx(cr,cc,3,curMap);
+		}
+	}
+	
+	private static void printMap(int[][] curMap) {
+		for(int i=0;i<N;i++) {
+			for(int j=0;j<M;j++) {
+				System.out.print(curMap[i][j] + " ");
 			}
 			System.out.println();
 		}
