@@ -1,88 +1,86 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class Main {
-	static int N, M, H; //(주의) N: 세로개수, H: 놓을수 있는 가로 개수, M: 가로개수
-	static boolean ladder[][];
+	
+	static int N; //세로선 col 2~10
+	static int H; //가로선 row 1~30
+	static int M; //이미 존재하는 가로선 개수 0~(N-1)*H
+	static int[][] map = new int[30][10];
 	static int min = 4;
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		M = sc.nextInt();
-		H = sc.nextInt();
-		
-		
-		ladder = new boolean[H][N];
-		
-		for(int i = 0; i < M; i++) {
-			int a = sc.nextInt();
-			int b = sc.nextInt();
-			
-			ladder[a - 1][b - 1] = true;
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		N = Integer.parseInt(st.nextToken());
+		M = Integer.parseInt(st.nextToken());
+		H = Integer.parseInt(st.nextToken());
+		for(int i=0;i<M;i++) {
+			st = new StringTokenizer(br.readLine());
+			map[Integer.parseInt(st.nextToken())-1][Integer.parseInt(st.nextToken())-1] = 1;
 		}
-		
-		sc.close();
+		br.close();
 		
 		solution();
-		System.out.println(min == 4 ? "-1" : min);
+		System.out.println(min > 3 ? -1 : min);
 	}
 	
-	private static void solution() {		
-		dfs(0, 0, 0);	
+	private static void solution() {
+		for(int i=0;i<=3;i++) {
+			if(recursive(0,i,0,0)) break;	
+		}
 	}
 	
-	private static void dfs(int row, int col, int addCnt) {
-		if(addCnt > 3) {
-			return;
+	private static boolean recursive(int cnt, int targetCnt, int r, int c) {
+		//printMap();
+		
+		if(cnt > 3) {
+			return false;
 		}
 		
-		if(check(ladder)) {
-			if(addCnt < min) {
-				min = addCnt;
+		//확인
+		if(cnt==targetCnt) {
+			if(simulation()) {
+				if(cnt < min) min = cnt;
+				return true;	
 			}
-			return;
+			else return false;
 		}
-
-		//System.out.println(String.format("row: %d, col: %d, addCnt: %d", row, col, addCnt));
-		//printLadder(ladder);
 		
-		//현재 위치에서 오른쪽으로 가로 사다리를 연결할 수 있는지 검사
-		for(int c = col; c < N - 1; c++) {
-			for(int r = row; r < H; r++) {
-				if(c + 1 < N && ladder[r][c] == false && ladder[r][c + 1] == false) {
-					ladder[r][c] = true;
-					dfs(r, c, addCnt + 1);
-					ladder[r][c] = false;
-				}	
+		for(int i=r;i<H;i++) {
+			for(int j=c;j<N-1;j++) {
+				if(map[i][j] != 0 || (j-1 >= 0 && map[i][j-1] != 0)) continue;
+				
+				map[i][j] = 1;
+				if(recursive(cnt+1, targetCnt, i, j+2)) return true; //어차피 사다리를 연속해서 놓을  수 없기 때문에 사다리를 놓은 바로 옆을 건너뛰고 시작한다. (시간 단축)
+				map[i][j] = 0;
 			}
-			row = 0; //한 열을 다 보고 나면 다음 열 첫 행으로 이동
+			c = 0;
 		}
+		
+		return false;
 	}
 	
-	private static boolean check(boolean ld[][]) {		
-		for(int c = 0 ; c < N; c++) {
+	private static boolean simulation() {		
+		for(int c=0;c<N;c++) {
+			int cRes = c;
 			int r = 0;
-			int nextC = c;
 			
-			//탐색시에는 마지막 열 봐야하기 때문에
-			while(r < H && nextC < N) {
-				//오른쪽으로 이동할 수 있는 경우
-				if(ld[r][nextC] == true) {
-					r++;
-					nextC++;
+			while(r < H) {
+				//오른쪽으로 가야하는지 확인
+				if(cRes+1 < N && map[r][cRes]==1) {
+					cRes++;
 				}
-				//왼쪽으로 이동할 수 있는 경우
-				else if(nextC - 1 >= 0 && ld[r][nextC - 1] == true) {
-					r++;
-					nextC--;
+				//왼쪽으로 가야하는지 확인
+				else if(cRes-1 >= 0 && map[r][cRes-1]==1) {
+					cRes--;
 				}
-				else {
-					r++;
-				}
+				r++;
 			}
 			
-			//한개라도 안되면 실패
-			if(nextC != c) {
+			if(cRes != c) {
 				return false;
 			}
 		}
@@ -90,10 +88,10 @@ public class Main {
 		return true;
 	}
 	
-	private static void printLadder(boolean ld[][]) {
-		for(int i = 0; i < H; i++) {
-			for(int j = 0; j < N; j++) {
-				System.out.print(ld[i][j]? "1 " :"0 ");
+	private static void printMap() {
+		for(int i=0;i<H;i++) {
+			for(int j=0;j<N;j++) {
+				System.out.print(map[i][j] + " ");
 			}
 			System.out.println();
 		}
