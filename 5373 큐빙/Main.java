@@ -1,169 +1,330 @@
-import java.util.Scanner;
-
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 /*
- 전개도
-            -----------
-            | 0  1  2 |
-            | 3  4  5 |
-            | 6  7  8 |
- ----------------------------------
- | 9  10 11 | 18 19 20 | 27 28 29 |
- | 12 13 14 | 21 22 23 | 30 31 32 |
- | 15 16 17 | 24 25 26 | 33 34 35 |
- ----------------------------------
-            | 36 37 38 |
-            | 39 40 41 |
-            | 42 43 44 |
-            ------------
-            | 45 46 47 |
-            | 48 49 50 |
-            | 51 52 53 |
-            ------------
-U : 0~8
-L : 9~17
-F : 18~26
-R : 27~35
-D : 36~44
-B : 45~53
-
-초기 색상 : U(w), L(g), F(r), R(b), D(y), B(o)
-
+ * 			 0  1  2
+ * 			 3  4  5
+ * 			 6  7  8
+ * 
+ *  9 10 11  18 19 20  27 28 29
+ * 12 13 14  21 22 23  30 31 32
+ * 15 16 17  24 25 26  33 34 35
+ * 			 
+ *    		 36 37 38
+ *    		 39 40 41
+ *    		 42 43 44
+ *    
+ *    		 45 46 47
+ *      	 48 49 50
+ *      	 51 52 53
  */
-
 public class Main {
-	static int n;
-	static int nuberingCube[][][]; //인덱스 번호를 부여
-	static char cube[]; //큐브 인덱스에 따른 색상 부여
+	static int T; //~100
+	static int n; //1~1000
+	static char face; //회전할 면- U:위, D:아래, F:앞, B:뒤, L:왼, R:오
+	static char dir; //회전 방향- +:시계, -반시계
+	static char[] dice = new char[54];
+	static StringBuilder sb = new StringBuilder();
 	
-	//시계방향으로 돌렸을 때 세 개씩 밀리는 상황을 생각해서 정렬하여 삽입
-	//네개의 면에 각 3개씩, 총 12개
-	//각 시작을 면의 위로 생각하고 위->왼->아->오 로 생각
-	final static int SIDE_NUMBERS[][] = {
-			{51, 52, 53, 11, 10, 9, 20, 19, 18, 29, 28, 27}, 	//U
-			{0, 3, 6, 45, 48, 51, 36, 39, 42, 18, 21, 24}, 		//L
-			{6, 7, 8, 17, 14, 11, 38, 37, 36, 27, 30, 33}, 		//F
-			{8, 5, 2, 26, 23, 20, 44, 41, 38, 53, 50, 47}, 		//R
-			{24, 25, 26, 15, 16, 17, 47, 46, 45, 33, 34 ,35}, 	//D
-			{42, 43, 44, 9, 12, 15, 2, 1, 0, 35, 32, 29}  		//B
-	};
-	
-	final static char COLORS[] = {'w', 'g', 'r', 'b', 'y', 'o'};
-	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		n = sc.nextInt();
-		
-		int cnt;
-		
-		for(int i = 0; i < n; i++) {
-			//큐브 초기화
-			initCube();
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		T = Integer.parseInt(br.readLine());
+		StringTokenizer st = null;
+		for(int t=0;t<T;t++) {
+			//주사위 초기화
+			init();
 			
-			cnt = sc.nextInt();
-			
-			for(int j = 0; j < cnt; j++) {
-				String F = sc.next();
-				char face = F.charAt(0);
-				char dir = F.charAt(1);
+			n = Integer.parseInt(br.readLine());
+			st = new StringTokenizer(br.readLine());
+			for(int i=0;i<n;i++) {
+				String tok = st.nextToken();
+				face = tok.charAt(0);
+				dir = tok.charAt(1);
 				
-				rotate(face, dir);	
+				//회전
+				rotation();
 			}
 			
-			//큐브 윗면 출력
-			printCubeUpFace();
+			//출력
+			printUp();
 		}
-		sc.close();
-	}
-	
-	private static void initCube() {
-		nuberingCube = new int[6][3][3];
-		int num = 0;
-		for(int i = 0; i < 6; i++) {
-			for(int j = 0; j < 3; j++) {
-				for(int c = 0; c < 3; c++) {
-					nuberingCube[i][j][c] = num++;
-				}
-			}
-		}
+		br.close();
 		
-		cube = new char[54];
-		for(int i = 0; i < 54; i++) {
-			cube[i] = COLORS[i / 9 ];
-		}
+		System.out.println(sb);
 	}
 	
-	private static void printCubeUpFace() {
-		int index = 0;
-		
-		for(int i = 0; i < 3; i++) {
-			for(int j = 0; j < 3; j++) {
-				System.out.print(cube[index++]);
+	//윗 면은 흰색, 아랫 면은 노란색, 앞 면은 빨간색, 뒷 면은 오렌지색, 왼쪽 면은 초록색, 오른쪽 면은 파란색이다.
+	//흰색은 w, 노란색은 y, 빨간색은 r, 오렌지색은 o, 초록색은 g, 파란색은 b
+	private static void init() {
+		for(int i=0; i<54; i++) {
+			switch(i/9) {
+			case 0:
+				dice[i] = 'o';
+				break;
+			case 1:
+				dice[i] = 'g';
+				break;
+			case 2:
+				dice[i] = 'w';
+				break;
+			case 3:
+				dice[i] = 'b';
+				break;
+			case 4:
+				dice[i] = 'r';
+				break;
+			case 5:
+				dice[i] = 'y';
+				break;
 			}
-			System.out.println();
+			
 		}
-		//System.out.println();
 	}
 	
-	private static int getFaceIndex(char face) {
-		int index = -1;
+	private static void rotation() {
+		int rotationCnt = dir=='+'?1:3; //시계방향 3번 = 반시계 1번
 		
 		switch(face) {
 		case 'U':
-			index = 0;
-			break;
-		case 'L':
-			index = 1;
-			break;
-		case 'F':
-			index = 2;
-			break;
-		case 'R':
-			index = 3;
+			/*     6  7  8
+			 * 
+			 * 11  18 19 20  27
+			 * 14  21 22 23  30
+			 * 17  24 25 26  33
+			 * 
+			 * 	   36 37 38
+			 */
+			for(int i=0; i<rotationCnt; i++) {
+				char temp = dice[18];
+				dice[18] = dice[24];
+				dice[24] = dice[26];
+				dice[26] = dice[20];
+				dice[20] = temp;
+				temp = dice [19];
+				dice[19] = dice[21];
+				dice[21] = dice[25];
+				dice[25] = dice[23];
+				dice[23] = temp;
+				
+				temp = dice[6];
+				dice[6] = dice[17];
+				dice[17] = dice[38];
+				dice[38] = dice[27];
+				dice[27] = temp;				
+				temp = dice[7];
+				dice[7] = dice[14];
+				dice[14] = dice[37];
+				dice[37] = dice[30];
+				dice[30] = temp;
+				temp = dice[8];
+				dice[8] = dice[11];
+				dice[11] = dice[36];
+				dice[36] = dice[33];
+				dice[33] = temp;
+			}
 			break;
 		case 'D':
-			index = 4;
+			/*  	 42 43 44
+			 * 
+			 *  15  45 46 47  35
+			 *  12  48 49 50  32
+			 *  9   51 52 53  29
+			 *  
+			 *       0  1  2
+			 */
+			for(int i=0; i<rotationCnt; i++) {
+				char temp = dice[45];
+				dice[45] = dice[51];
+				dice[51] = dice[53];
+				dice[53] = dice[47];
+				dice[47] = temp;
+				temp = dice [46];
+				dice[46] = dice[48];
+				dice[48] = dice[52];
+				dice[52] = dice[50];
+				dice[50] = temp;
+				
+				temp = dice[42];
+				dice[42] = dice[9];
+				dice[9] = dice[2];
+				dice[2] = dice[35];
+				dice[35] = temp;
+				temp = dice[43];
+				dice[43] = dice[12];
+				dice[12] = dice[1];
+				dice[1] = dice[32];
+				dice[32] = temp;
+				temp = dice[44];
+				dice[44] = dice[15];
+				dice[15] = dice[0];
+				dice[0] = dice[29];
+				dice[29] = temp;
+			}
+			break;
+		case 'F':
+			/* 	   24 25 26
+			 * 
+			 * 17  36 37 38  33
+			 * 16  39 40 41  34
+			 * 15  42 43 44  35
+			 * 
+			 *     45 46 47
+			 */
+			for(int i=0; i<rotationCnt; i++) {
+				char temp = dice[36];
+				dice[36] = dice[42];
+				dice[42] = dice[44];
+				dice[44] = dice[38];
+				dice[38] = temp;
+				temp = dice [37];
+				dice[37] = dice[39];
+				dice[39] = dice[43];
+				dice[43] = dice[41];
+				dice[41] = temp;
+				
+				temp = dice[24];
+				dice[24] = dice[15];
+				dice[15] = dice[47];
+				dice[47] = dice[33];
+				dice[33] = temp;
+				temp = dice[25];
+				dice[25] = dice[16];
+				dice[16] = dice[46];
+				dice[46] = dice[34];
+				dice[34] = temp;
+				temp = dice[26];
+				dice[26] = dice[17];
+				dice[17] = dice[45];
+				dice[45] = dice[35];
+				dice[35] = temp;
+			}
 			break;
 		case 'B':
-			index = 5;
+			/*
+			 * 	   51 52 53
+			 * 
+			 * 9   0  1  2  29
+			 * 10  3  4  5  28
+			 * 11  6  7  8  27
+			 * 
+			 * 	   18 19 20
+			 */
+			for(int i=0; i<rotationCnt; i++) {
+				char temp = dice[0];
+				dice[0] = dice[6];
+				dice[6] = dice[8];
+				dice[8] = dice[2];
+				dice[2] = temp;
+				temp = dice [1];
+				dice[1] = dice[3];
+				dice[3] = dice[7];
+				dice[7] = dice[5];
+				dice[5] = temp;
+
+				temp = dice[51];
+				dice[51] = dice[11];
+				dice[11] = dice[20];
+				dice[20] = dice[29];
+				dice[29] = temp;
+				temp = dice[52];
+				dice[52] = dice[10];
+				dice[10] = dice[19];
+				dice[19] = dice[28];
+				dice[28] = temp;
+				temp = dice[53];
+				dice[53] = dice[9];
+				dice[9] = dice[18];
+				dice[18] = dice[27];
+				dice[27] = temp;
+			}
+			break;
+		case 'L':
+			/*
+			 *	   0 3 6
+			 * 
+			 * 51  9 10 11  18
+			 * 48  12 13 14  21
+			 * 45  15 16 17  24
+			 * 
+			 * 	   42 39 36
+			 */
+			for(int i=0; i<rotationCnt; i++) {
+				char temp = dice[9];
+				dice[9] = dice[15];
+				dice[15] = dice[17];
+				dice[17] = dice[11];
+				dice[11] = temp;
+				temp = dice [10];
+				dice[10] = dice[12];
+				dice[12] = dice[16];
+				dice[16] = dice[14];
+				dice[14] = temp;
+
+				temp = dice[0];
+				dice[0] = dice[45];
+				dice[45] = dice[36];
+				dice[36] = dice[18];
+				dice[18] = temp;
+				temp = dice[3];
+				dice[3] = dice[48];
+				dice[48] = dice[39];
+				dice[39] = dice[21];
+				dice[21] = temp;
+				temp = dice[6];
+				dice[6] = dice[51];
+				dice[51] = dice[42];
+				dice[42] = dice[24];
+				dice[24] = temp;
+			}
+			break;
+		case 'R':
+			/*
+			 *     8  5  2
+			 *     
+			 * 20  27 28 29  53
+			 * 23  30 31 32  50
+			 * 26  33 34 35  47
+			 * 
+			 *     38 41 44
+			 */
+			for(int i=0; i<rotationCnt; i++) {
+				char temp = dice[27];
+				dice[27] = dice[33];
+				dice[33] = dice[35];
+				dice[35] = dice[29];
+				dice[29] = temp;
+				temp = dice [28];
+				dice[28] = dice[30];
+				dice[30] = dice[34];
+				dice[34] = dice[32];
+				dice[32] = temp;
+
+				temp = dice[8];
+				dice[8] = dice[26];
+				dice[26] = dice[44];
+				dice[44] = dice[53];
+				dice[53] = temp;
+				temp = dice[5];
+				dice[5] = dice[23];
+				dice[23] = dice[41];
+				dice[41] = dice[50];
+				dice[50] = temp;
+				temp = dice[2];
+				dice[2] = dice[20];
+				dice[20] = dice[38];
+				dice[38] = dice[47];
+				dice[47] = temp;
+			}
 			break;
 		}
-		
-		return index;
 	}
 	
-	private static void rotate(char face, char dir) {
-		int faceIndex = getFaceIndex(face);
-		int cnt  = dir == '+' ? 1 : 3; //1: 시계방향, 3: 시계반대방향
-		
-		for(int i = 0 ; i < cnt; i++) {
-			//1. 네 방향에 붙어있는 옆면 돌리기
-			char tempCubeSide[] = new char[12];
-			
-			for(int j = 0; j < 12; j++) {
-				tempCubeSide[j] = cube[SIDE_NUMBERS[faceIndex][j]]; //해당 면에 해당하는 네방향의 면에 붙어있는 인덱스를 통해 색상 배열을 가져온다.
-			}
-			
-			//3개씩 밀어서 다시 넣는다.
-			for(int j = 0; j < 12; j++) {
-				cube[SIDE_NUMBERS[faceIndex][j]] = tempCubeSide[(j+3) % 12];
-			}
-			
-			//2. 해당 면 돌리기
-			char tempCubeFace[][] = new char[3][3];
-			for(int j = 0; j < 3; j++) {
-				for(int z = 0; z < 3; z++) {
-					//해당 면의 인덱스들을 통해 색상을 옮긴다.
-					//열을 반대의 행으로 변경한다. 예) (0,0) (0,1) (0,2) -> (0,2) (1,2) (2,2)
-					tempCubeFace[z][2 - j] = cube[nuberingCube[faceIndex][j][z]]; 
-				}
-			}
-			
-			for(int j = 0; j < 3; j++) {
-				for(int z = 0; z < 3; z++) {
-					cube[nuberingCube[faceIndex][j][z]] = tempCubeFace[j][z];
-				}
-			}
-		}
+	private static void printUp() {
+		 for(int i=18; i<=26; i++) {
+			 sb.append(dice[i]);
+			 if(i==20||i==23||i==26) sb.append('\n');
+		 }
 	}
 }
 
