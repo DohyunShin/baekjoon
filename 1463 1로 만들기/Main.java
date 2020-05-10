@@ -1,12 +1,9 @@
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Scanner;
 
 public class Main {
 	static int N; //1~1,000,000
 	static int min = Integer.MAX_VALUE;
-	static boolean[] visit = new boolean[1000001];
-	static Queue<Integer> q = new LinkedList<Integer>();
+	static int[] memo = new int[1000001];
 	
 	public static void main(String[] args) {
 		Scanner sc = new Scanner(System.in);
@@ -17,49 +14,41 @@ public class Main {
 	}
 	
 	private static void solution() {
-		if(N==1) {
-			min=0;
-			return;
-		}
-		bfs();
+		min = dp(1)-1;
 	}
 	
-	private static void bfs() {
-		q.add(1);
-		visit[1] = true;
-		
-		int depth = 0;
-		while(!q.isEmpty()) {
-			int length = q.size();
-			depth++;
-			for(int i=0; i<length; i++) {
-				int cur = q.poll();
-				int next=0;
-				for(int d=0; d<3; d++) {
-					switch(d) {
-					case 0:
-						next=cur*3;
-						break;
-					case 1:
-						next=cur*2;
-						break;
-					case 2:
-						next=cur+1;
-						break;
-					}
-					
-					if(next >= 1000001 || visit[next]) continue;
-					
-					if(next == N) {
-						min = depth;
-						return;
-					}
-					else if(next < N) {
-						q.add(next);
-						visit[next] = true;
-					}
-				}
-			}
+	private static int dp(int n) {	
+		if(n==N) {
+			return 1;
 		}
+		if(n>N) {
+			return -1;
+		}
+		
+		if(memo[n] != 0) return memo[n]+1;
+		
+		int minRes = Integer.MAX_VALUE;
+
+		int res = dp(n*3);
+		if(res!=-1) minRes = res;
+				
+		res = dp(n*2);
+		if(res!=-1) {
+			if(minRes > res)
+				minRes= res;
+		}
+		
+		res = dp(n+1);
+		if(res!=-1) {
+			if(minRes > res)
+				minRes= res;
+		}
+		
+		if(minRes != Integer.MAX_VALUE) {
+			memo[n]=minRes;
+			return minRes+1;
+		}
+		else
+			return -1;
 	}
 }
