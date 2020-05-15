@@ -1,141 +1,123 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Queue;
 import java.util.StringTokenizer;
 
 public class Main {
-	static class Point {
-		int r, c;
+	static class Point{
+		public int r,c;
 		public Point(int r, int c) {
 			this.r = r;
 			this.c = c;
 		}
-		
-		public Point() {}
+	}
+	
+	static class Direction{
+		public int X;
+		public String C; //L:왼, D:오
+		public Direction(int X, String C) {
+			this.X = X;
+			this.C = C;
+		}
 	}
 	
 	static int N; //2~100
-	static int K; //0~100 사과 개수
-	static boolean[][] apples = new boolean[100][100];
-	static int L; //1~100 방향 변환 횟수
-	//초 1~10,000 이하
-	//방향, L:왼쪽, D:오른쪽 (90방향 회전)
-	static HashMap<Integer, Character> moveInfoMap = new HashMap<Integer, Character>(); 
-	static int d = 0; //현재 이동 방향
-	//우하좌상
+	static int K; //0~100 사과개수
+	static int L; //0~100 방향정보
+	static int[][] map = new int[100][100];
+	static LinkedList<Point> snake = new LinkedList<Point>();
+	static Queue<Direction> directions = new LinkedList<Direction>();
+	static int curD = 0; //0:우, 1:하, 2:좌, 3:상
 	static int[] dr = {0,1,0,-1};
 	static int[] dc = {1,0,-1,0};
-	static int counter = 1;
-	static LinkedList<Point> snake = new LinkedList<Main.Point>();
+	static int time = 0;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		N = Integer.parseInt(br.readLine());
 		K = Integer.parseInt(br.readLine());
 		StringTokenizer st = null;
-		for(int i=0;i<K;i++) {
+		for(int i=0; i<K; i++) {
 			st = new StringTokenizer(br.readLine());
-			apples[Integer.parseInt(st.nextToken())-1][Integer.parseInt(st.nextToken())-1] = true;
+			map[Integer.parseInt(st.nextToken())-1][Integer.parseInt(st.nextToken())-1] = 2; //사과
 		}
-		snake.addFirst(new Point(0,0));
 		L = Integer.parseInt(br.readLine());
-		for(int i=0;i<L;i++) {
+		for(int i=0; i<L; i++) {
 			st = new StringTokenizer(br.readLine());
-			moveInfoMap.put(Integer.parseInt(st.nextToken()), st.nextToken().charAt(0));
+			directions.add(new Direction(Integer.parseInt(st.nextToken()), st.nextToken()));
 		}
+		snake.add(new Point(0,0));
+		map[0][0] = 1; //뱀
 		br.close();
 		
 		solution();
-		System.out.println(counter);
+		System.out.println(time);
 	}
-
+	
 	private static void solution() {
-		Point head = null;
+		Direction direction = null;
 		
+		int nr, nc;
 		while(true) {
-			//뱀의 다음 이동 위치 구하기
-			Point next = new Point();
+			time++;
+
+			if(direction == null && !directions.isEmpty()) {
+				direction = directions.poll();
+			}
+			
+			//머리 늘리기
+			Point head = snake.getFirst();
+			nr = head.r+dr[curD];
+			nc = head.c+dc[curD];
+			
+			snake.addFirst(new Point(nr, nc));
 			head = snake.getFirst();
-			next.r = head.r + dr[d];
-			next.c = head.c + dc[d];
+			//map[head.r][head.c] = 1; //여기서 머리 표시하면 사과를 검사할 수 없다.
 			
-			//벽에 닿는 경우 게임 종료(맵의 밖)
-			if(!(next.r >= 0 && next.r < N && next.c >= 0 && next.c < N)) break;
-		
-			//뱀의 머리가 몸통에 닿는 경우 게임 종료
-			if(isBody(next)) break;
+			//머리가 벽 또는 몸에 닿았는지 확인
+			if(!(head.r>=0&&head.r<N&&head.c>=0&&head.c<N) || map[head.r][head.c] == 1) return;
 			
-			//뱀 머리 이동
-			snake.addFirst(next);
-			if(!eatApple()) {
-				//뱀이 사과를 먹지 않았다면 꼬리 이동
+			//머리 위치에 사과 있는지 확인
+			if(map[head.r][head.c] == 2) {
+				
+			}
+			else {
+				//사과 없으면 꼬리 움직이기
+				Point tail = snake.getLast();
+				map[tail.r][tail.c] = 0;
 				snake.removeLast();
 			}
-
-			//이동방향 변경
-			//현재 시간에 변경할 방향 정보가 있는지 확인, 있다면 현재 방향 정보를 바꿔준다.
-			if(moveInfoMap.containsKey(counter)) {
-				switch(moveInfoMap.get(counter)) {
-				case 'L':
-					d--;
-					if(d == -1) d = 3;
-					break;
-				case 'D':
-					d++;
-					if(d == 4) d = 0;
-					break;
-				}
-				moveInfoMap.remove(counter);
-			}
+			map[head.r][head.c] = 1; //사과 검사 끝나고 머리 표시
 			
-			//printMap();
-			counter++;
-		}
-	}
-	
-	//뱀이 현재 사과를 먹었는지 확인하는 함수, 먹었으면 true 반환하고 apples 맵에서 해당 위치 사과 제거
-	private static boolean eatApple() {
-		Point head = snake.getFirst();
-		if(apples[head.r][head.c]) {
-			apples[head.r][head.c] = false;
-			return true;
-		}
-		else return false;
-	}
-	
-	//현재 뱀의 머리 위치가 몸통에 닿았는지 확인
-	private static boolean isBody(Point next) {
-		Point body = null;
-		
-		for(int i=1; i<snake.size(); i++) {
-			body = snake.get(i);
-			if(body.r == next.r && body.c == next.c) {
-				return true;
+			//방향 바꾸기
+			if(direction != null) {
+				if(direction.X == time) {
+					if(direction.C.equals("L")) {
+						curD--;
+						if(curD == -1) {
+							curD = 3;
+						}
+					}
+					else {
+						curD++;
+						if(curD == 4) {
+							curD = 0;
+						}
+					}
+					
+					direction = null; //다음 회차에서 다음 방향 정보를 가져오기 위해
+				}
 			}
 		}
-		
-		return false;
 	}
 	
 	private static void printMap() {
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < N; j++) {
-				boolean isSnake = false;
-				for(int z=0; z<snake.size(); z++) {
-					if(snake.get(z).r == i && snake.get(z).c == j) {
-						System.out.print("* ");
-						isSnake = true;
-						break;
-					}
-				}
-				
-				if(!isSnake)
-					System.out.print("0 ");
-				
+		for(int i=0; i<N; i++) {
+			for(int j=0; j<N; j++) {
+				System.out.print(map[i][j] + " ");
 			}
-			
 			System.out.println();
 		}
 		System.out.println();
