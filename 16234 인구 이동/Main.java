@@ -1,168 +1,153 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.StringTokenizer;
 
 public class Main {
-
-	static int N, L, R;
-	static int map[][];
-	static int unionMap[][]; //연합 정보를 표시
-	static int unionCnt = 0; //연합 개수
-	static int cnt = 0;
-	static int dx[] = {0, 0, -1, 1};
-	static int dy[] = {-1, 1, 0, 0};
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		L = sc.nextInt();
-		R = sc.nextInt();
-		
-		map = new int[N][N];
-		
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < N; j++) {
-				map[i][j] = sc.nextInt();
+	static int N; //1~50
+	static int L, R; //1~100
+	static int[][] map = new int[50][50];
+	static int[][] union = new int[50][50];
+	static int cnt = 0;
+	static int[] dr = {-1,1,0,0};
+	static int[] dc = {0,0,-1,1};
+	static UnionInfo[] unionInfos = new UnionInfo[2500]; //최소 두 개 국가가 연합을 만들기 때문에
+	
+	//국경선 열기(연합) 조건: 국경선 공유, 인구 차이 L<= <=R
+	//조건에 맞는게 하나도 없으면 종료
+	//국경선 모두 열고 인구 이동
+	//연합인구수/연합국 칸수로 연합 인구 변경
+	//연합 해체
+	
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		N = Integer.parseInt(st.nextToken());
+		L = Integer.parseInt(st.nextToken());
+		R = Integer.parseInt(st.nextToken());
+		for(int i=0; i<N; i++) {
+			st = new StringTokenizer(br.readLine());
+			for(int j=0; j<N; j++) {
+				map[i][j] = Integer.parseInt(st.nextToken());
+				unionInfos[N*i+j] = new UnionInfo();
 			}
 		}
+		br.close();
 		
-		
-		sc.close();
-		
-		//printMap(map);
 		solution();
 		System.out.println(cnt);
 	}
 	
 	private static void solution() {
-		boolean move = true;
-		
-		while(move) {
-			makeUnion();
+		while(true) {
+			int unionCnt = 0;
 			
-			//연합 개수가 1개 이상인 경우 인구를 이동 시킨다.
-			if(unionCnt > 0) {
-				//모든 연합의 인구를 이동 시킨다. 이동 후 연합개수는 0으로 초기화 된다.
-				while(unionCnt > 0) {
-					movePeople(unionCnt--);
+			//연합국 검사 맵 초기화
+			for(int r=0; r<N; r++) {
+				for(int c=0; c<N; c++) {					
+					union[r][c] = 0;
 				}
-				
-				//printMap(map);
-				cnt++; //이동 횟수 증가시킨다.
-			}
-			else {
-				move = false;
-			}
-		}
-	}
-	
-	
-	//인구 이동
-	private static void movePeople(int unionNum) {
-		//연합 국가의 인덱스를 저장
-		int unionX[] = new int[N*N];
-		int unionY[] = new int[N*N];
-		int curUnionCnt = 0;
-		
-		int sum = 0;
-		
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < N; j++) {
-				if(unionMap[i][j] == unionNum) {
-					sum += map[i][j];
-					unionX[curUnionCnt] = j;
-					unionY[curUnionCnt] = i;
-					curUnionCnt++;
-				}
-			}
-		}
-		
-		int aver = sum/curUnionCnt; //평균 인구
-		
-		for(int i = 0; i < curUnionCnt; i++) {
-			map[unionY[i]][unionX[i]] = aver;
-		}
-	}
-	
-	//연합 만들기
-	private static void makeUnion() {
-		unionMap = new int[N][N]; //연합 맵 초기화
-		
-		int unionNum = 1;
-		for(int r = 0; r < N; r ++) {
-			for(int c = 0; c < N; c++) {
-				//현재 국가가 이미 연합에 속해있으면 다음으로 건너뛴다.
-				if(unionMap[r][c] != 0) {
-					continue;
-				}
-				
-				//연합이 하나라도 생성 되었으면 연합 번호를 증가 시키고 연합 개수로 반영한다.
-				if(makeUnionDfs(r, c, unionNum)) {
-					//printMap(unionMap);
-					unionCnt = unionNum;
-					unionNum++;
-				}
-			}
-		}
-	}
-	
-	//조건에 부합하는 경우 계속 연합을 만들어 나간다.
-	private static boolean makeUnionDfs(int r, int c, int unionNum) {
-		//맵을 벗어난 경우 종료
-		if(!(r >= 0 && r < N && c >= 0 && c < N)) {
-			return false;
-		}
-		
-		boolean result = false;
-		
-		for(int i = 0; i < 4; i++) {
-			int nr = r + dy[i];
-			int nc = c + dx[i];
-			
-			if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) {
-				continue;
 			}
 			
-			//연합에 가입되어있지 않는 국가 중 연합 가능성을 확인
-			//연합이 가능한 경우 연합 표시하고 dfs를 진행한다.
-			if(unionMap[nr][nc] == 0 && check(r, c, nr, nc)) {				
-				//연합 표시
-				//현재 국가가 연합이 아닌 경우 연합 표시 (dfs 처음 시작 시 동작)
-				if(unionMap[r][c] == 0) {
-					unionMap[r][c] = unionNum;
+			//연합국 검사
+			for(int r=0; r<N; r++) {
+				for(int c=0; c<N; c++) {
+					if(union[r][c] != 0) continue;
+					if(bfs(r,c,unionCnt)) unionCnt++;
 				}
-				unionMap[nr][nc] = unionNum;
+			}
+			
+			
+			//연합국이 발견되지 않으면 종료
+			if(unionCnt == 0) {
+				break;
+			}
+			
+			//각 연합국의 인구 이동
+			for(int i = 0; i<unionCnt; i++) {
+				int unionNum = i+1;
 				
-				//연합을 이어서 만든다. (dfs 진행)
-				makeUnionDfs(nr, nc, unionNum);
+				int p = unionInfos[i].total/unionInfos[i].cnt;
 				
-				result = true; //주변국가 중 하나라도 연합에 가입되면(연합 개수 증가를 위해)
+				for(int r=0; r<N; r++) {
+					for(int c=0; c<N; c++) {					
+						if(union[r][c] == unionNum) {
+							map[r][c] = p;
+						}
+					}
+				}
+			}
+			cnt++;
+			//printMap();
+		}
+	}
+	
+	private static boolean bfs(int r, int c, int num) {
+		int unionNum = num+1;
+		
+		Queue<Point> q = new LinkedList<Main.Point>();
+		q.add(new Point(r,c));
+		
+		Point curPt;
+		int nr, nc;
+		boolean found = false;
+		while(!q.isEmpty()) {
+			curPt = q.poll();
+			
+			for(int d=0; d<4; d++) {
+				nr = curPt.r+dr[d];
+				nc = curPt.c+dc[d];
+				
+				if(!(nr>=0&&nr<N&&nc>=0&&nc<N) || union[nr][nc] != 0) continue;
+				
+				int diff = Math.abs(map[curPt.r][curPt.c]-map[nr][nc]);
+				if(!(diff>=L&&diff<=R)) continue;
+				
+				//처음 찾는 경우
+				if(!found) {
+					found = true;
+					union[curPt.r][curPt.c] = unionNum;
+					unionInfos[unionNum-1].total = map[curPt.r][curPt.c];
+					unionInfos[unionNum-1].cnt = 1;
+				}
+				
+				union[nr][nc] = unionNum;
+				unionInfos[unionNum-1].total += map[nr][nc];
+				unionInfos[unionNum-1].cnt++;
+				q.add(new Point(nr, nc));
 			}
 		}
 		
-		return result;
+		return found;
 	}
 	
-	//현재 위치와 다음 위치의 인구차를 보고 연합이 가능한지 여부를 구한다.
-	private static boolean check(int cr, int cc, int nr, int nc) {
-		int cP = map[cr][cc];
-		int nP = map[nr][nc];
-		int pG = Math.abs(cP - nP);
-		
-		if(pG >= L && pG <= R) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	
-	private static void printMap(int printMap[][]) {
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < N; j++) {
-				System.out.print(printMap[i][j] + " ");
+	private static void printMap() {
+		for(int i=0; i<N; i++) {
+			for(int j=0; j<N; j++) {
+				System.out.print(map[i][j] + " ");
 			}
 			System.out.println();
 		}
 		System.out.println();
 	}
-
+	
+	static class Point{
+		public int r, c;
+		public Point() {}
+		public Point(int r, int c) {
+			this.r=r;
+			this.c=c;
+		}
+	}
+	
+	static class UnionInfo{
+		public int total, cnt;
+		public UnionInfo() {
+			
+		}
+	}
 }
