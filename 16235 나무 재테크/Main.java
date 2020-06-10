@@ -1,178 +1,121 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Scanner;
+import java.util.StringTokenizer;
 
 public class Main {
-	//땅 정보 클래스
-	private static class Space{
-		public ArrayList<Integer> treeList; //땅이 갖는 나무 나이 목록
-		public ArrayList<Integer> deadTreeList; //땅이 갖는 죽은 나무 나이 목록
-		public int n; //땅이 갖는 양분 양
-		
-		public Space() {
-			treeList = new ArrayList<Integer>();
-			deadTreeList = new ArrayList<Integer>();
-			n = 5; //초기 모든 땅의 양분 양은 5
-		}
-	}
-	static int N, M, K; //N: 맵 크기, M: 초기 나무 개수, K: 목표 날짜 (K년 동안)
-	static Space map[][];
-	static int A[][]; //각 땅에 추가되는 양분의 양
-	static int cnt = 0;
-	//상, 하, 좌, 우, 상좌, 하좌, 상우, 하우
-	static final int dx[] = {-1, 0, 1, -1, 1, -1, 0, 1};
-	static final int dy[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+	static int N; // 1~10
+	static int M; // 1~100 (N^2)
+	static int K; // 1~1000
+	static int[][] map = new int[10][10]; //현재 땅 양분 정보
+	static int[][] A = new int[10][10]; //추가되는 고정된 양분 정보
+	static ArrayList<Integer>[][] treeMap = new ArrayList[10][10]; //현재 땅의 나무 정보
+	static int[] dr = {-1, -1, -1, 0, 0, 1, 1, 1};
+	static int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
+	static int treeCnt = 0;
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		M = sc.nextInt();
-		K = sc.nextInt();
-		
-		map = new Space[N][N];
-		A = new int[N][N];
-		
-		//각 땅에 뿌려줄 양분 입력과 땅 생성
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		N = Integer.parseInt(st.nextToken());
+		M = Integer.parseInt(st.nextToken());
+		K = Integer.parseInt(st.nextToken());
 		for(int i = 0; i < N; i++) {
+			st = new StringTokenizer(br.readLine());
 			for(int j = 0; j < N; j++) {
-				map[i][j] = new Space();
-				
-				A[i][j] = sc.nextInt();
+				map[i][j] = 5;
+				A[i][j] = Integer.parseInt(st.nextToken());
+				treeMap[i][j] = new ArrayList<Integer>();
 			}
 		}
-		
-		//초기 나무 위치와 나이
 		for(int i = 0; i < M; i++) {
-			int x = sc.nextInt() - 1;
-			int y = sc.nextInt() - 1;
-			int age = sc.nextInt();
-			
-			map[x][y].treeList.add(age); //x,y 위치에 나이가 age인 나무를 추가
+			st = new StringTokenizer(br.readLine());
+			int r = Integer.parseInt(st.nextToken())-1;
+			int c = Integer.parseInt(st.nextToken())-1;
+			int z = Integer.parseInt(st.nextToken());
+			treeMap[r][c].add(z);
 		}
-		
-		sc.close();
+		treeCnt = M;
+		br.close();
 		
 		solution();
-		System.out.println(cnt);
+		System.out.println(treeCnt);
 	}
 	
 	private static void solution() {
-		while(K-- > 0) {
-			//사계절
-			for(int i = 0; i < 4; i++) {
-				oneYear(i);
-			}
-		}
+		int year = 0;
 		
-		//나무 개수 세기
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < N; j++) {
-				if(map[i][j].treeList.size() > 0) {
-					cnt += map[i][j].treeList.size();
-				}
-			}
-		}
-	}
-	
-	private static void oneYear(int season) {
-		switch(season) {
-		case 0: //봄
-			for(int i = 0; i < N; i++) {
-				for(int j = 0; j < N; j++) {
-					if(map[i][j].treeList.size() > 0) {
-						ArrayList<Integer> tempTreeList = (ArrayList<Integer>) map[i][j].treeList.clone();
-						ArrayList<Integer> tempDeadTreeList = (ArrayList<Integer>) map[i][j].deadTreeList.clone();
-						int tempN = map[i][j].n;
-						
-						Collections.sort(tempTreeList); //나이 어린 나무 부터 정렬
-						
-						for(int z = 0; z < tempTreeList.size(); z++) {
-							//양분이 모자라는 경우 현재 나무 부터 다 죽인다.(정렬되어있으니까 뒤에는 나이가 더 많은 나무들)
-							if(tempN < tempTreeList.get(z)) {								
-								for(int h = z; h < tempTreeList.size(); h++) {
-									int deadTreeAge = tempTreeList.get(h);
-									tempDeadTreeList.add(deadTreeAge); //죽은 나무 저장
-								}
-								
-								//죽은 나무 개수 만큼 뒤에서 부터 제거한다.
-								for(int h = 0; h < tempDeadTreeList.size(); h++) {
-									tempTreeList.remove(tempTreeList.size() - 1);
-								}
-								break;
-							}
-							else {
-								//양분 먹기
-								tempN -= tempTreeList.get(z);
-								
-								//나이 증가
-								int tempAge = tempTreeList.get(z);
-								tempTreeList.set(z, tempAge + 1);
-							}
+		while(true) {
+			//봄 & 여름					
+			for(int r=0; r<N; r++) {
+				for(int c=0; c<N; c++) {
+					ArrayList<Integer> ages = treeMap[r][c];
+					if(ages.size() == 0) continue;
+										
+					Collections.sort(ages);
+					int rest = map[r][c];
+					
+					ArrayList<Integer> newAges = new ArrayList<Integer>();
+					
+					for(int i = 0; i < ages.size(); i++) {
+						if(rest >= ages.get(i)){
+							rest -= ages.get(i);							
+							//나이 갱신
+							newAges.add(ages.get(i) + 1);
 						}
-						
-						//계산된 양분과 나무 목록 정보를 다시 입력
-						map[i][j].n = tempN;
-						map[i][j].treeList = tempTreeList;
-						map[i][j].deadTreeList = tempDeadTreeList;
-					}
-				}
-			}
-			break;
-		case 1: //여름
-			for(int i = 0; i < N; i++) {
-				for(int j = 0; j < N; j++) {
-					//죽은 나무가 있으면 양분으로 변경
-					if(map[i][j].deadTreeList.size() > 0) {
-						int tempN = map[i][j].n;
-						ArrayList<Integer> tempDeadTreeList = (ArrayList<Integer>) map[i][j].deadTreeList.clone();
-						
-						for(int z = 0; z < tempDeadTreeList.size(); z++) {
-							int addN = tempDeadTreeList.get(z) / 2;
-							tempN += addN;
+						else {
+							//정렬시켰으니까 양분 부족한 이후 부터는 다 필요 없음
+							for(int j = i; j < ages.size(); j++) {
+								rest += ages.get(j)/2;
+							}
+							break;
 						}
-						tempDeadTreeList.clear();
-						
-						map[i][j].n = tempN;
-						map[i][j].deadTreeList = tempDeadTreeList;
 					}
+					
+					int deathCnt = ages.size() - newAges.size();
+					treeCnt -= deathCnt;
+					
+					map[r][c] = rest; //양분 갱신
+					treeMap[r][c] = newAges; //나무 리스트 교체
 				}
 			}
-			break;
-		case 2: //가을
-			for(int i = 0; i < N; i++) {
-				for(int j = 0; j < N; j++) {
-					//나무가 있는 경우 번식할 나무 (나이가 5배수)가 있는지 검사하고 있으면 주변에 나무 번식한다.
-					if(map[i][j].treeList.size() > 0) {
-						ArrayList<Integer> tempTreeList = (ArrayList<Integer>) map[i][j].treeList.clone();
-						
-						for(int z = 0; z < tempTreeList.size(); z++) {
-							int age = tempTreeList.get(z);
-							//번식할 나무라면 번식 주변 8개 땅에 번식시킨다.
-							if(age % 5 == 0) {
+			
+			//가을
+			for(int r=0; r<N; r++) {
+				for(int c=0; c<N; c++) {
+					ArrayList<Integer> ages = treeMap[r][c];
+					if(ages.size() == 0) continue;
+					
+					for(Integer age : ages) {
+						if(age % 5 == 0) {
+							int nr, nc;
+							
+							for(int d = 0; d < 8; d++) {
+								nr = r + dr[d];
+								nc = c + dc[d];
 								
-								for(int h = 0; h < 8; h++) {
-									int nx = j + dx[h];
-									int ny = i + dy[h];
-									
-									if(nx >= 0 && nx < N && ny >= 0 && ny < N) {
-										map[ny][nx].treeList.add(1); //번식
-									}
-								}
+								if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) continue;
+								
+								treeMap[nr][nc].add(1);
+								treeCnt++;
 							}
 						}
 					}
 				}
 			}
-			break;
-		case 3: //겨울
+			
+			//겨울
 			for(int i = 0; i < N; i++) {
 				for(int j = 0; j < N; j++) {
-					if(A[i][j] != 0) {
-						map[i][j].n += A[i][j]; //양분 추가
-					}
+					if(A[i][j] == 0) continue;
+					map[i][j] += A[i][j];
 				}
 			}
-			break;
+			
+			year++;
+			if(year == K)break;
 		}
 	}
 }
