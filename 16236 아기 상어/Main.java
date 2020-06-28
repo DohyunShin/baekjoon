@@ -1,182 +1,140 @@
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.StringTokenizer;
 
 public class Main {
-	private static class BfsResult{
-		public Point pt;
-		public int moveCnt;
-		public BfsResult(Point pt, int moveCnt) {
-			this.pt = pt;
-			this.moveCnt = moveCnt;
-		}
-	}
-	private static class Point{
+	static class Point{
 		public int r, c;
-		public Point() {}
 		public Point(int r, int c) {
 			this.r = r;
 			this.c = c;
 		}
 	}
 	
-	static int N;
-	static int map[][];
-	static int bs = 2; //아기 상어 크기
-	static Point bpt; //아기 상어 위치
-	static int eat = 0; //아기 상어가 먹은 물고기 수
-	static int dr[] = {-1, 1, 0, 0};
-	static int dc[] = {0, 0, -1, 1};
-	static int cnt = 0; //최소 이동거리
+	static int N; //2~20
+	static int[][] map = new int[20][20];
+	static Point curPt = null;
+	static int w = 2;
+	static int eat = 0;
+	static int cnt = 0;
+	static int[] dr = {-1, 1, 0, 0};
+	static int[] dc = {0, 0, -1, 1};
 	
-	public static void main(String[] args) {	
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		map = new int[N][N];
-		
+	public static void main(String[] args) throws IOException{	
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		N = Integer.parseInt(br.readLine());
+		StringTokenizer st = null;
 		for(int i = 0; i < N; i++) {
+			st = new StringTokenizer(br.readLine());
 			for(int j = 0; j < N; j++) {
-				int input = sc.nextInt();
-				if(input >= 0 && input <= 6) {
-					map[i][j] = input;
+				int input = Integer.parseInt(st.nextToken());
+				if(input==9) {
+					curPt = new Point(i, j);
 				}
-				else if(input == 9) {
-					bpt = new Point(i, j);
+				else {
+					map[i][j] = input;
 				}
 			}
 		}
-		sc.close();
+		br.close();
 		
 		solution();
 		System.out.println(cnt);
 	}
 	
-	private static void solution() {		
-		while(true) {		
-			
-			//bfs 탐색
-			//가장 가까운 물고기를 찾는다.
-			BfsResult bfsResult = bfs();
-			
-			//더이상 먹을 수 있는 물고기가 없다면 종료한다.
-			if(bfsResult == null) {
-				break;
+	public static void solution() {
+		while(true) {
+			int moveCnt = bfs();
+			if(moveCnt == 0) break;
+			else {
+				cnt += moveCnt;
 			}
-			
-			//아기 상어를 해당 위치로 옮기고, 물고기를 먹는다.
-			bpt = bfsResult.pt;
-			map[bpt.r][bpt.c] = 0;
-			eat++;
-			//아기 상어가 본인 크기 만큼 물고기를 먹었다면 먹은 물고기 수를 초기화 하고 성장한다.
-			if(eat == bs) {
-				eat = 0;
-				bs++;
-			}
-			//움직인 거리를 저장
-			cnt += bfsResult.moveCnt;
-			
-			/* print map
-			for(int i = 0; i < N; i++) {
-				for(int j = 0; j < N; j++) {
-					if(i == bpt.r && j == bpt.c) {
-						System.out.print("x ");	
-					}
-					else {
-						System.out.print(map[i][j] + " ");
-					}
-					
-				}
-				System.out.println();
-			}
-			System.out.println("size: " + bs + " move: " + cnt + " eat:" + eat);
-			*/
 		}
+		
 	}
 	
-	private static BfsResult bfs() {
-		//현재 상어 위치
-		int depth = 0; //이동거리가 된다.
-		Point cpt = bpt;
+	public static int bfs() {		
+		Queue<Point> q = new LinkedList<Point>();
+		boolean[][] visit = new boolean[N][N];
+		q.add(curPt);
+		visit[curPt.r][curPt.c] = true;
 		
-		Deque<Point> dq = new ArrayDeque<Point>();
-		boolean visit[][] = new boolean[N][N];
+		int depth = 0;
 		
-		dq.push(cpt);
-		visit[cpt.r][cpt.c] = true;
+		ArrayList<Point> eatList = new ArrayList<Point>(); //같은 깊이에서 먹을 수 있는 모든 물고기 위치 저장
 		
-		while(true) {
+		while(!q.isEmpty()) {
+			int length = q.size();
 			depth++;
-			Deque<Point> sdq = new ArrayDeque<Point>(); //메인 큐가 비워지는 동안 각각의 네방향을 담을 큐
+			eatList.clear();
 			
-			Point fpt = null;
-			
-			//큐가 비워질 때 까지 검사
-			while(!dq.isEmpty()) {
-				cpt = dq.pop();
+			for(int i = 0; i < length; i++) {
+				Point pt = q.poll();
+				int nr, nc;
 				
-				Point npt = null;
-				
-				for(int i = 0; i < 4; i++) {
-					npt = new Point();
+				for(int d = 0; d < 4; d++) {
+					nr = pt.r + dr[d];
+					nc = pt.c + dc[d];
 					
-					npt.r = cpt.r + dr[i];
-					npt.c = cpt.c + dc[i];
+					if(!(nr >= 0 && nr < N && nc >= 0 && nc < N) || visit[nr][nc]) continue;
 					
-					//범위 내에 방문하지 않은 곳만 조사
-					if(!(npt.r >= 0 && npt.r < N && npt.c >= 0 && npt.c < N) || visit[npt.r][npt.c] == true) {
-						continue;
-					}
+					int fishWeight =  map[nr][nc];
 					
-					//위치에 물고기가 큰 경우
-					if(map[npt.r][npt.c] > bs) {
-						continue;
-					}
-					
-					//지나가는 경우
-					if(map[npt.r][npt.c] == 0 || map[npt.r][npt.c] == bs) {
-						visit[npt.r][npt.c] = true;
-						sdq.push(npt);
-					}
-					//먹이를 찾은 경우
-					else if(map[npt.r][npt.c] < bs) {
-						//여러개 찾을 수 있으니까 비교
-						if(fpt == null) {
-							fpt = npt;
-						}
-						else {
-							if(fpt.r > npt.r) {
-								fpt = npt;
-							}
-							else if(fpt.r == npt.r){
-								if(fpt.c > fpt.c) {
-									fpt = npt;
-								}
-							}
-						}
+					if(fishWeight > w) continue;
+					else {
+						visit[nr][nc] = true;
+						q.add(new Point(nr,nc));
 						
-						visit[npt.r][npt.c] = true;
-						sdq.push(npt);
+						//먹기
+						if(fishWeight != 0 && fishWeight < w) {
+							eatList.add(new Point(nr, nc));
+						}
 					}
 				}
 			}
 			
-			//먹이를 찾은 경우
-			if(fpt != null) {
-				return new BfsResult(fpt, depth);
-			}
-			else {
-				//서브 큐의 아이템들을 메인큐로 옮겨 담는다. 다음 검사를 준비
-				while(!sdq.isEmpty()) {
-					dq.push(sdq.pop());
+			//가장 위에 있고 가장 왼쪽에 있는
+			Point minPt = new Point(N, N);
+			for(Point eatItem : eatList) {
+				if(minPt.r > eatItem.r) {
+					minPt = eatItem;
+				}
+				else if(minPt.r == eatItem.r){
+					if(minPt.c > minPt.c) {
+						minPt = eatItem;
+					}
 				}
 			}
 			
-			//다음 검사할 아이템이 없는 경우 종료
-			if(dq.isEmpty()) {
-				break;
+			if(minPt.r != N && minPt.c != N) {
+				eat++;
+				if(eat == w) {
+					w++;
+					eat = 0;
+				}
+				map[minPt.r][minPt.c] = 0;
+				
+				//이동
+				curPt.r = minPt.r;
+				curPt.c = minPt.c;
+				return depth;
 			}
 		}
 		
-		return null;
+		return 0; //먹을 물고기가 없는 경우
+ 	}
+	
+	static public void printMap() {
+		for(int i = 0; i < N; i++) {
+			for(int j = 0; j < N; j++) {
+				System.out.print(map[i][j] + " ");
+			}
+			System.out.println();
+		}
+		System.out.println("size:" + w  + " cnt:" + cnt + " eat:"+eat);
 	}
 }
