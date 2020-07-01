@@ -1,183 +1,147 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 public class Main {
-	static int R, C, T;
-	static int map[][];
-	static final int dr[] = {-1, 1, 0, 0};
-	static final int dc[] = {0, 0, -1, 1};
-	static int hr = -1; //공기청정기 상단 위치(인덱스 위치는 더 작다)
-	static int lr = -1; //공기청정기 하단 위치(인덱스 위치는 더 크다)
-	static int sum = 0;
+	static int R, C; //6~50
+	static int T; //1~1000
+	static int[][] map = new int[50][50];
+	//상하좌우
+	static int[] dr = {-1, 1, 0, 0};
+	static int[] dc = {0, 0, -1, 1};
+	static int[] cw = {3, 1, 2, 0}; //시계방향(우-하-좌-상)
+	static int[] ccw = {3, 0, 2, 1}; //반시계방향(우-상-좌-하	)
+	static int top, bot;
+	static int total = 0;
 	
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		R = sc.nextInt();
-		C = sc.nextInt();
-		T = sc.nextInt();
-		
-		map = new int[R][C];
-				
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = new StringTokenizer(br.readLine());
+		R = Integer.parseInt(st.nextToken());
+		C = Integer.parseInt(st.nextToken());
+		T = Integer.parseInt(st.nextToken());
 		for(int i = 0; i < R; i++) {
+			st = new StringTokenizer(br.readLine());
 			for(int j = 0; j < C; j++) {
-				int input = sc.nextInt();
-				if(input == -1) {
-					//어차피 순서대로 넣기 때문에 자동으로 작은 수가 hr에 들어간다.
-					if(hr == -1) {
-						hr = i;
-					}
-					else {
-						lr = i;
-					}
+				map[i][j] = Integer.parseInt(st.nextToken());
+				if(map[i][j] == -1) {
+					if(top == 0) top = i;
+					else bot = i;
 				}
-				else {
-					map[i][j] = input;
-				}
-				
-				
 			}
 		}
-		sc.close();
+		br.close();
+		
 		solution();
-		System.out.println(sum);
+		System.out.println(total);
 	}
 	
-	private static void printMap() {
+	public static void solution() {
+		while(T-- > 0) {
+			//미세먼지 확산	
+			diffuse();
+
+			//공기 순환
+			rotate();
+		}
+		
+		for(int i = 0; i < R; i++) {
+			for(int j = 0; j < C; j++) {
+				if(map[i][j] == -1) continue;
+				total += map[i][j];
+			}
+		}
+	}
+	
+	public static void rotate() {
+		int[][] newMap = map.clone();
+		for(int i = 0; i < map[0].length; i++) {
+			newMap[i] = map[i].clone();
+		}
+		
+		int nr, nc;
+		int cr, cc;
+		
+		//시계반대방향 순환
+		cr = top;
+		cc = 1;
+		for(int d=0; d<4; d++) {
+			while(true) {
+				nr = cr + dr[ccw[d]];
+				nc = cc + dc[ccw[d]];
+				
+				//벽에 부딪히거나 공기청정기를 만나면 종료한다.
+				if(!(nr >= 0 && nr <= top && nc >= 0 && nc < C) || (nr == top && nc == 0)) break;
+				
+				newMap[nr][nc] = map[cr][cc];
+				
+				cr = nr;
+				cc = nc;
+			}
+		}
+		
+		//시계방향 순환
+		cr = bot;
+		cc = 1;
+		for(int d=0; d<4; d++) {
+			while(true) {
+				nr = cr + dr[cw[d]];
+				nc = cc + dc[cw[d]];
+				
+				//벽에 부딪히거나 공기청정기를 만나면 종료한다.
+				if(!(nr >= bot && nr < R && nc >= 0 && nc < C) || (nr == bot && nc == 0)) break;
+				
+				newMap[nr][nc] = map[cr][cc];
+				
+				cr = nr;
+				cc = nc;
+			}
+		}
+		
+		newMap[top][1] = 0;
+		newMap[bot][1] = 0;
+		map = newMap;
+	}
+	
+	public static void diffuse() {
+		int[][] addMap = new int[R][C];
+		
 		for(int r = 0; r < R; r++) {
 			for(int c = 0; c < C; c++) {
-				System.out.print(map[r][c] + " ");
+				if(map[r][c] <= 0) continue;
+				
+				int v = map[r][c];
+				int addCnt = 0;
+				int nr, nc;
+				for(int d = 0; d < 4; d++) {
+					nr = r + dr[d];
+					nc = c + dc[d];
+					if(!(nr >= 0 && nr < R && nc >= 0 && nc < C) || map[nr][nc] == -1) continue;
+					
+					addMap[nr][nc] += v/5;
+					addCnt++;
+				}
+				
+				map[r][c] -= ((map[r][c]/5)*addCnt);
+			}
+		}
+		
+		//합산하기
+		for(int r = 0; r < R; r++) {
+			for(int c = 0; c < C; c++) {
+				map[r][c] += addMap[r][c];
+			}
+		}
+	}
+	
+	public static void printMap() {
+		for(int i = 0; i < R; i++) {
+			for(int j = 0; j < C; j++) {
+				System.out.print(map[i][j] + " ");
 			}
 			System.out.println();
 		}
 		System.out.println();
-	}
-	
-	private static void calculate() {
-		for(int i = 0; i < R; i++) {
-			for(int j = 0; j < C; j++) {
-				sum += map[i][j];
-			}
-		}
-	}
-	private static void solution() {
-		while(T-- > 0) {
-			diffusion();
-			//printMap();
-			cleaningH();
-			cleaningL();
-			//printMap();
-		}
-		
-		calculate();
-	}
-	
-	private static void diffusion() {
-		int temp[][] = new int[R][C]; //확산된 먼지의 양을 축적할 맵
-		
-		for(int r = 0; r < R; r++) {
-			for(int c = 0; c < C; c++) {
-				//미세먼지가 있는 경우 확산 시킨다.
-				if(map[r][c] >= 1 && map[r][c] <= 1000) {
-					int nr, nc;
-					int cnt = 0; //확산되는 구간 수
-					int d = map[r][c] / 5; //확산되는 먼지양
-					
-					for(int dir = 0; dir < 4; dir++) {
-						nr = r + dr[dir];
-						nc = c + dc[dir];
-						
-						if(!(nr >= 0 && nr < R && nc >= 0 && nc < C) || (nr == hr && nc == 0) || (nr == lr && nc == 0)) {
-							continue;
-						}
-						
-						cnt++;
-						temp[nr][nc] += d;
-					}
-					
-					//확산된 먼지양 만큼 빼준다.
-					map[r][c] -= (d*cnt);
-				}
-			}
-		}
-		
-		//확산된 먼지와 원래 먼지를 합친다.
-		for(int r = 0; r < R; r++) {
-			for(int c = 0; c < C; c++) {
-				map[r][c] += temp[r][c];
-			}
-		}
-	}
-	
-	private static void cleaningH() {
-		int R_RANGE_START = 0;
-		int R_RANGE_STOP = hr;
-		
-		//row+, col+, row-, col-
-		int tdr[] = {1, 0, -1, 0};
-		int tdc[] = {0, 1, 0, -1};
-		int tdir = 0;
-		
-		int cr = 0;
-		int cc = 0;
-		int pd = map[cr][cc]; //이전 위치의 먼지, 처음 시작 위치의 먼지를 저장하고 시작
-		
-		while(tdir < 4) {
-			int nr = cr + tdr[tdir];
-			int nc = cc + tdc[tdir];
-			
-			if(!(nr >= R_RANGE_START && nr <= R_RANGE_STOP && nc >= 0 && nc < C)) {
-				tdir++;
-				continue;
-			}
-			
-			//위치가 공기청정기 인 경우
-			if(nr == hr && nc == 0) {
-				pd = 0; //이전 위치의 먼지를 0으로 바꾼다.
-			}
-			
-			//먼지를 한칸씩 이동
-			int temp = map[nr][nc];
-			map[nr][nc] = pd;
-			pd = temp;
-			
-			cr = nr;
-			cc = nc;
-		}
-	}
-	
-	private static void cleaningL() {
-		int R_RANGE_START = lr;
-		int R_RANGE_STOP = R - 1;
-		
-		//col+, row+, col-, row-
-		int tdr[] = {0, 1, 0, -1};
-		int tdc[] = {1, 0, -1, 0};
-		int tdir = 0;
-		
-		int cr = lr;
-		int cc = 0;
-		int pd = map[cr][cc]; //이전 위치의 먼지, 처음 시작 위치의 먼지를 저장하고 시작
-		
-		while(tdir < 4) {
-			int nr = cr + tdr[tdir];
-			int nc = cc + tdc[tdir];
-			
-			if(!(nr >= R_RANGE_START && nr <= R_RANGE_STOP && nc >= 0 && nc < C)) {
-				tdir++;
-				continue;
-			}
-			
-			//위치가 공기청정기 인 경우
-			if(nr == lr && nc == 0) {
-				pd = 0; //이전 위치의 먼지를 0으로 바꾼다.
-			}
-			
-			//먼지를 한칸씩 이동
-			int temp = map[nr][nc];
-			map[nr][nc] = pd;
-			pd = temp;
-			
-			cr = nr;
-			cc = nc;
-		}
 	}
 }
