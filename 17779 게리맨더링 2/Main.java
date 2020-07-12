@@ -1,196 +1,171 @@
-import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.StringTokenizer;
 
 public class Main {
-
-	static int N;
-	static int map[][];
-	static int sepMap[][]; //선거구를 구분지를 맵
-	static int min = 99999;
-	static int dr[] = {-1,1,0,0};
-	static int dc[] = {0,0,-1,1};
- 
-	public static void main(String[] args) {
-		Scanner sc = new Scanner(System.in);
-		N = sc.nextInt();
-		map = new int[N][N];
-		
+	static int N; 
+	static int[][] map = new int[20][20];
+	static int[][] section = new int[20][20];
+	static int[] pr = new int[4];
+	static int[] pc = new int[4];
+	//시계반대방향 대각선으로 이동
+	static int[] ccwr = {1,1,-1,-1};
+	static int[] ccwc = {-1,1,1,-1};
+	static int[] dr = {-1,1,0,0};
+	static int[] dc = {0,0,-1,1};
+	static int total = 0; //맵 전체의 총 인구수
+	static int[] people = new int[5]; //각 구역의 인구수
+	static int res = Integer.MAX_VALUE;
+	
+	public static void main(String[] args) throws IOException{
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		StringTokenizer st = null;
+		N = Integer.parseInt(br.readLine());
 		for(int i = 0; i < N; i++) {
+			st = new StringTokenizer(br.readLine());
 			for(int j = 0; j < N; j++) {
-				map[i][j] = sc.nextInt();
+				int w = Integer.parseInt(st.nextToken());
+				map[i][j] = w;
+				total += w;
 			}
 		}
-		sc.close();
+		br.close();
 		
 		solution();
-		System.out.println(min);
+		System.out.println(res);
 	}
 	
 	public static void solution() {
-		//기준점과 경계의 길이 정하기
-		//경계 길이가 모두 1일 때의 최대, 최소 범위를 생각
-		for(int r = 0; r <= N-3; r++) {
-			for(int c = 1; c <= N-2; c++) {
-				for(int d1 = 1; r+d1 <= N-2 && c-d1 >= 0; d1++) {
-					for(int d2 = 1; r+d2 <= N - 2 && c+d2 <= N-1; d2++) {
+		for(int r = 0; r < N-2; r++) {
+			for(int c = 0; c < N-1; c++) {
+				for(int d1 = 1; r+d1 < N && c-d1 >= 0; d1++) {
+					for(int d2 = 1; r+d2 < N && c+d2 <N; d2++) {
 						if(!(r+d1+d2 <= N-1 && c-d1+d2 <= N-2)) {
 							continue;
 						}
 						
-						makeSepMap(r, c, d1, d2);
-						calculate();
+						if(makeSection(r, c, d1, d2)) {
+							//printSection();
+							calculate();
+						}
 					}
 				}
 			}
 		}
-		
 	}
 	
-	//각 구역의 인원수를 계산하여 가장 적은 서거구 수와 가장 많은 선거구 수의 차를 구한다.
-	private static void calculate() {
-		int secCnt[] = new int[5];
-		
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < N; j++) {
-				switch(sepMap[i][j]) {
-				case 1:
-					secCnt[0] += map[i][j];
-					break;
-				case 2:
-					secCnt[1] += map[i][j];
-					break;
-				case 3:
-					secCnt[2] += map[i][j];
-					break;
-				case 4:
-					secCnt[3] += map[i][j];
-					break;
-				case 5:
-				case 0:
-					secCnt[4] += map[i][j];
-					break;
-				}
-			}
+	public static void calculate() {
+		int sum = 0;
+		for(int i = 0; i < 4; i++) {
+			sum += people[i];
 		}
+		people[4] = total - sum; //5구역의 인구수 계산
 		
-		int tempMin = 9999999;
-		int tempMax = -9999999;
+		Arrays.sort(people);
+		
+		int diff = people[4] - people[0];
+		
+		if(res > diff) res = diff;
+		//System.out.println(diff );
+	}
+	
+	public static void initSection() {
 		for(int i = 0; i < 5; i++) {
-			if(tempMin > secCnt[i]) {
-				tempMin = secCnt[i];
-			}
-			
-			if(tempMax < secCnt[i]) {
-				tempMax = secCnt[i];
-			}
+			people[i] = 0;
 		}
-		
-		int diff = tempMax - tempMin;
-		
-		if(min > diff) {
-			min = diff;
-		}
-	}
-	
-	private static void printSepMap() {
 		for(int i = 0; i < N; i++) {
 			for(int j = 0; j < N; j++) {
-				System.out.print(sepMap[i][j] + " ");
+				section[i][j] = 0;
 			}
-			System.out.println();
 		}
-		System.out.println();
 	}
 	
-	public static void makeSepMap(int r, int c, int d1, int d2) {
-		sepMap = new int[N][N];
+	public static boolean makeSection(int r, int c, int d1, int d2) {
+		initSection();
+		
+		//5구역 꼭지점(시계 반대방향으로)
+		pr[0] = r;
+		pr[1] = r+d1;
+		pr[2] = r+d1+d2;
+		pr[3] = r+d2;
+		
+		pc[0] = c;
+		pc[1] = c-d1;
+		pc[2] = c-d1+d2;
+		pc[3] = c+d2;
 		
 		int cr = r;
 		int cc = c;
 		int nr, nc;
-		int dr = 1;
-		int dc = -1;
+		int d = 0;
 		
-		//경계선 그리기
 		while(true) {
-			sepMap[cr][cc] = 5;
+			section[cr][cc] = 5; 
 			
-			nr = cr + dr;
-			nc = cc + dc;
+			nr = cr + ccwr[d];
+			nc = cc + ccwc[d];
 			
-			//각 경계선을 만나면 방향을 바꾼다.
-			if(nr == r+d1 && nc == c-d1) {
-				dr = 1;
-				dc = 1;
+			if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) return false;
+			if(nr == r && nc == c) break; //한바퀴 돌면 종료 
+			if(nr == pr[d+1 > 3 ? 0 : d+1] && nc == pc[d+1 > 3 ? 0 : d+1]) {
+				//경계를 만나면 방향을 바꾼다.
+				d++;
 			}
-			else if(nr == r+d1+d2 && nc == c-d1+d2) {
-				dr = -1;
-				dc = 1;
-			}
-			else if(nr == r+d2 && nc == c+d2) {
-				dr = -1;
-				dc = -1;
-			}
-			
 			cr = nr;
 			cc = nc;
-			
-			//처음으로 돌아오면 중단
-			if(cr == r && cc == c) {
-				break;
-			}
 		}
 		
-		//각 모서리의 끝 부분은 구역이 정해져있다.
-		//이를 이용해서 구역을 만든다.
-		makeSepMapSec(1, 0, 0, r+d1-1, c);
-		makeSepMapSec(2, 0, N-1, r+d2, c+1);
-		makeSepMapSec(3, N-1, 0, r+d1, c-d1+d2-1);
-		makeSepMapSec(4, N-1, N-1, r+d2+1, c-d1+d2);
+		//구역의 각 모서리에서 부터 확산
+		dfs(1, 0, 0);
+		dfs(2, 0, N-1);
+		dfs(3, N-1, 0);
+		dfs(4, N-1, N-1);
 		
-		//구역을 모두 배분하고 남은 수 중 0은 5구역으로 생각한다.
-		//printSepMap();
+		return true;
 	}
 	
-	static void makeSepMapSec(int sec, int cr, int cc, int br, int bc) {
-		if(sepMap[cr][cc] != 0) {
-			return;
-		}
+	public static void dfs(int num, int r, int c) {
+		if(section[r][c] != 0) return;
 		else {
-			sepMap[cr][cc] = sec;
+			section[r][c] = num;
+			people[num-1] += map[r][c];
 		}
 		
 		int nr, nc;
-		
-		for(int i = 0; i < 4; i++) {
-			nr = cr + dr[i];
-			nc = cc + dc[i];
+		for(int d = 0; d < 4; d++) {
+			nr = r + dr[d];
+			nc = c + dc[d];
 			
-			if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) {
-				continue;
-			}
+			if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) continue;
 			
-			if(sec == 1) {
-				if(!(nr <= br && nc <= bc)) {
-					continue;
-				}
-			}
-			else if(sec == 2) {
-				if(!(nr <= br && nc >= bc)) {
-					continue;
-				}
-			}
-			else if(sec == 3) {
-				if(!(nr >= br && nc <= bc)) {
-					continue;
-				}
-			}
-			else if(sec == 4) {
-				if(!(nr >= br && nc >= bc)) {
-					continue;
-				}
+			switch(num) {
+			case 1:
+				if(nr >= pr[1] || nc > pc[0]) continue;
+				break;
+			case 2:
+				if(nr > pr[3] || nc <= pc[0]) continue;
+				break;
+			case 3:
+				if(nr < pr[1] || nc >= pc[2]) continue;
+				break;
+			case 4:
+				if(nr <= pr[3] || nc < pc[2]) continue;
+				break;
 			}
 			
-			makeSepMapSec(sec, nr, nc, br, bc);
+			dfs(num, nr, nc);
 		}
+	}
+		
+	public static void printSection() {
+		for(int i = 0; i < N; i++) {
+			for(int j = 0; j < N; j++) {
+				System.out.print(section[i][j] + " ");
+			}
+			System.out.println();
+		}
+		System.out.println();
 	}
 }
