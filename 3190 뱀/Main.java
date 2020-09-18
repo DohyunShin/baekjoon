@@ -1,125 +1,146 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.Queue;
+import java.util.Objects;
 import java.util.StringTokenizer;
 
 public class Main {
-	static class Point{
-		public int r,c;
-		public Point(int r, int c) {
-			this.r = r;
-			this.c = c;
-		}
-	}
-	
-	static class Direction{
-		public int X;
-		public String C; //L:왼, D:오
-		public Direction(int X, String C) {
-			this.X = X;
-			this.C = C;
-		}
-	}
-	
-	static int N; //2~100
-	static int K; //0~100 사과개수
-	static int L; //0~100 방향정보
+	static int N; // 2~100
 	static int[][] map = new int[100][100];
-	static LinkedList<Point> snake = new LinkedList<Point>();
-	static Queue<Direction> directions = new LinkedList<Direction>();
-	static int curD = 0; //0:우, 1:하, 2:좌, 3:상
-	static int[] dr = {0,1,0,-1};
-	static int[] dc = {1,0,-1,0};
-	static int time = 0;
+	static int K; // 0~100
+	static int L; // 1~100
+	static ArrayList<Point> apples = new ArrayList<Main.Point>();
+	static ArrayList<Turn> turns = new ArrayList<Main.Turn>();
+	static int d = 3; // 상하좌우
+	static int[] dr = {-1,1,0,0};
+	static int[] dc = {0,0,-1,1};
+	static int res = 1;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		N = Integer.parseInt(br.readLine());
 		K = Integer.parseInt(br.readLine());
 		StringTokenizer st = null;
-		for(int i=0; i<K; i++) {
+		for(int i = 0; i < K; i++) {
 			st = new StringTokenizer(br.readLine());
-			map[Integer.parseInt(st.nextToken())-1][Integer.parseInt(st.nextToken())-1] = 2; //사과
+			apples.add(new Point(Integer.parseInt(st.nextToken())-1, Integer.parseInt(st.nextToken())-1));
 		}
 		L = Integer.parseInt(br.readLine());
-		for(int i=0; i<L; i++) {
+		for(int i = 0; i < L; i++) {
 			st = new StringTokenizer(br.readLine());
-			directions.add(new Direction(Integer.parseInt(st.nextToken()), st.nextToken()));
+			turns.add(new Turn(Integer.parseInt(st.nextToken()), st.nextToken().equals("L") ? 1 : 0));
 		}
-		snake.add(new Point(0,0));
-		map[0][0] = 1; //뱀
 		br.close();
 		
 		solution();
-		System.out.println(time);
+		System.out.println(res);
 	}
 	
-	private static void solution() {
-		Direction direction = null;
+	public static void solution() {
+		LinkedList<Point> snake = new LinkedList<Main.Point>();
+		map[0][0] = 1;
+		snake.add(new Point(0,0));
 		
-		int nr, nc;
+		Point next = new Point();
+		
+		int turnIdx = 0;
+		Turn turn = turns.get(turnIdx);
+		
 		while(true) {
-			time++;
-
-			if(direction == null && !directions.isEmpty()) {
-				direction = directions.poll();
-			}
+//			TEST
+//			for(int i = 0; i < N; i++) {
+//				for(int j = 0; j < N; j++) {
+//					System.out.print(map[i][j] + " ");
+//				}
+//				System.out.println();
+//			}
+//			System.out.println();
 			
-			//머리 늘리기
-			Point head = snake.getFirst();
-			nr = head.r+dr[curD];
-			nc = head.c+dc[curD];
+			// 다음 칸 위치
+			next.r = snake.getFirst().r + dr[d];
+			next.c = snake.getFirst().c + dc[d];
 			
-			snake.addFirst(new Point(nr, nc));
-			head = snake.getFirst();
-			//map[head.r][head.c] = 1; //여기서 머리 표시하면 사과를 검사할 수 없다.
+			// 벽이나 자기자신에 닿으면 종료
+			if(!(next.r >= 0 && next.r < N && next.c >= 0 && next.c < N) || map[next.r][next.c] == 1) break;
 			
-			//머리가 벽 또는 몸에 닿았는지 확인
-			if(!(head.r>=0&&head.r<N&&head.c>=0&&head.c<N) || map[head.r][head.c] == 1) return;
+			// 머리를 다음 칸에 위치
+			snake.addFirst(new Point(next.r, next.c));
+			map[next.r][next.c] = 1;
 			
-			//머리 위치에 사과 있는지 확인
-			if(map[head.r][head.c] == 2) {
-				
+			// 이동한 칸에 사과 확인
+			if(apples.contains(snake.getFirst())) {
+				// 사과 제거
+				apples.remove(snake.getFirst()); 
 			}
 			else {
-				//사과 없으면 꼬리 움직이기
+				// 꼬리 줄이기
 				Point tail = snake.getLast();
 				map[tail.r][tail.c] = 0;
 				snake.removeLast();
 			}
-			map[head.r][head.c] = 1; //사과 검사 끝나고 머리 표시
 			
-			//방향 바꾸기
-			if(direction != null) {
-				if(direction.X == time) {
-					if(direction.C.equals("L")) {
-						curD--;
-						if(curD == -1) {
-							curD = 3;
-						}
-					}
-					else {
-						curD++;
-						if(curD == 4) {
-							curD = 0;
-						}
-					}
-					
-					direction = null; //다음 회차에서 다음 방향 정보를 가져오기 위해
-				}
+			// x초 끝, 방향 바꾸기
+			if(res == turn.x) {
+				turn(turn.c);
+				turnIdx++;
+				if(turns.size() > turnIdx)
+					turn = turns.get(turnIdx);
 			}
+			
+			// 초 증가
+			res++;
 		}
 	}
 	
-	private static void printMap() {
-		for(int i=0; i<N; i++) {
-			for(int j=0; j<N; j++) {
-				System.out.print(map[i][j] + " ");
-			}
-			System.out.println();
+	public static void turn(int dir) {
+		switch(d) {
+		case 0:
+			if(dir == 1) d = 2;
+			else d = 3;
+			break;
+		case 1:
+			if(dir == 1) d = 3;
+			else d = 2;
+			break;
+		case 2:
+			if(dir == 1) d = 1;
+			else d = 0;
+			break;
+		case 3:
+			if(dir == 1) d = 0;
+			else d = 1;
+			break;
 		}
-		System.out.println();
+	}
+	
+	static class Point{
+		public int r, c;
+		public Point() {
+			
+		}
+		public Point(int r, int c) {
+			this.r = r;
+			this.c = c;
+		}
+		@Override
+		public int hashCode() {
+			return Objects.hash(r,c);
+		}
+		@Override
+		public boolean equals(Object obj) {
+			Point pt = (Point)obj;
+			return pt.r == this.r && pt.c == this.c;
+		}
+	}
+	
+	static class Turn{
+		public int x; // 1~10,000
+		public int c; // 왼:0, 오:1
+		public Turn(int x, int c) {
+			this.x = x;
+			this.c = c;
+		}
 	}
 }
