@@ -1,131 +1,123 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.StringTokenizer;
 
 public class Main {
-	static class Dragon{
-		public int ptCnt = 0; //좌표 개수
-		//0세대: 2개, 1세대: 3개, 2세대:5개, 3세대: 9개, ..., n세대: 2^n+1개
-		//최대 10세대: 1024+1개
-		public int[] Rs = new int[1025];
-		public int[] Cs = new int[1025];
-		public int[] Ds = new int[1025];
-		public int g; //1~10
-		public Dragon() {}
-	}
-
-	static int N; //1~20
-	static boolean[][] map = new boolean[101][101];
-	static Dragon[] dragons = new Dragon[20];
-	static int cnt = 0;
-	//우상좌하
-	static int[] dr= {0,-1,0,1};
-	static int[] dc= {1,0,-1,0};
+	static final int MAP_SIZE = 101;
+	static int N; // 1~20
+	static int[][] map = new int[MAP_SIZE][MAP_SIZE]; // x,y 0~100
+	static ArrayList<Dragon> dragons = new ArrayList<Dragon>();
+	// 우상좌하
+	static final int[] dr = {0,-1,0,1};
+	static final int[] dc = {1,0,-1,0};
+	static final int[] nextDir = {1, 2, 3, 0}; // 우:상:좌:하 = 0:1:2:3 에서 90도 회전 후 방향
+	static final int[] searchDir = {0, 3, 2}; // 우하좌 현재 좌표에서 시계방향으로 돌면서 검사
+	static int res = 0;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		N = Integer.parseInt(br.readLine());
 		StringTokenizer st = null;
-		int x,y,d,g;
-		for(int i=0;i<N;i++) {
+		for(int i = 0; i < N; i++) {
 			st = new StringTokenizer(br.readLine());
-			x = Integer.parseInt(st.nextToken());
-			y = Integer.parseInt(st.nextToken());
-			d = Integer.parseInt(st.nextToken());
-			g = Integer.parseInt(st.nextToken());
-			
-			Dragon dragon = new Dragon();
-			dragon.g = g;
-			extendDragon(dragon, y, x, d);
-			extendDragon(dragon, y+dr[d], x+dc[d], 0); //0 세대 만든다. 마지막 좌표는 방향을 갖지 않는다.
-			dragons[i] = dragon;
+			int x = Integer.parseInt(st.nextToken());
+			int y = Integer.parseInt(st.nextToken());
+			int d = Integer.parseInt(st.nextToken());
+			int g = Integer.parseInt(st.nextToken());
+			map[y][x] = 1;
+			// 0세대 끝점 이동해서 저장
+			x += dc[d];
+			y += dr[d];
+			dragons.add(new Dragon(x, y, d, g));
+			map[y][x] = 1;
 		}
 		br.close();
 		
 		solution();
-		System.out.println(cnt);
+		System.out.println(res);
 	}
 	
 	private static void solution() {
-		extend();
-		//printDragon();
-		count();
-	}
-	
-	private static void count() {
-		for(int r=0;r<101;r++) {
-			for(int c=0;c<101;c++) {
-				if(!map[r][c]) continue;
-				if(c+1 < 101 && map[r][c+1] && //왼쪽 확인
-					r+1 < 101 && map[r+1][c] && //아래 확인
-					map[r+1][c+1]) //왼쪽 아래 확인
-				{
-					cnt++;
-				}
-			}
+		for(Dragon dragon : dragons) {
+			extend(dragon);
+			//printMap();
 		}
+		search();
 	}
 	
-	//드래곤커브를 확장시킨다.
-	private static void extendDragon(Dragon dragon, int r, int c, int d) {
-		dragon.Rs[dragon.ptCnt] = r;
-		dragon.Cs[dragon.ptCnt] = c;
-		dragon.Ds[dragon.ptCnt] = d;
-		dragon.ptCnt++;
-		map[r][c] = true;
-	}
-	
-	private static void extend() {
-		for(int i=0; i<N; i++) {
-			Dragon dragon = dragons[i];
-			
-			//세대 만큼 확장
-			for(int g=0;g<dragon.g;g++) {
-				int curPtCnt = dragon.ptCnt;
+	private static void search() {
+		for(int i = 0; i < MAP_SIZE; i++) {
+			for(int j = 0; j < MAP_SIZE; j++) {
+				if(map[i][j] == 0) continue;
 				
-				//마지막 이전 부터 반대로 탐색
-				for(int j=curPtCnt-2; j>=0; j--) {
-					//현재 마지막 좌표
-					int lastR = dragon.Rs[dragon.ptCnt-1];
-					int lastC = dragon.Cs[dragon.ptCnt-1];
+				int nr = i;
+				int nc = j;
+				
+				boolean find = true;
+				for(int d = 0; d < searchDir.length; d++) {
+					nr += dr[searchDir[d]];
+					nc += dc[searchDir[d]];
 					
-					int preD = dragon.Ds[j];
-					
-					int nextD = preD+1 > 3 ? 0 : preD+1;
-					int nextR = lastR;
-					int nextC = lastC;
-					switch(nextD) {
-					case 0: //우
-						nextC = lastC+1;
-						break;
-					case 1: //상
-						nextR = lastR-1;
-						break;
-					case 2: //좌
-						nextC = lastC-1;
-						break;
-					case 3: //하
-						nextR = lastR+1;
+					if(!(nr >= 0 && nr < MAP_SIZE && nc >= 0 && nc < MAP_SIZE) || map[nr][nc] == 0) {
+						find = false;
 						break;
 					}
-					
-					if(!(nextR>=0 && nextR<101 && nextC>=0 && nextC<101)) break; //확장할 수 없다.
-					
-					//회전 방향은 현재의 마지막 좌표에 기입해주고 다음 좌표를 추가하여 마지막 좌표를 갱신한다.
-					dragon.Ds[dragon.ptCnt-1] = nextD;
-					extendDragon(dragon, nextR, nextC, 0); //마지막 좌표는 방향을 갖지 않는다.
 				}
+				if(find) res++;
 			}
 		}
 	}
 	
-	private static void printDragon() {
-		for(int i=0;i<N;i++) {
-			System.out.println((i+1)+"번째 드래곤커브" );
-			for(int j =0; j< dragons[i].ptCnt; j++) {
-				System.out.println(dragons[i].Rs[j] + "," + dragons[i].Cs[j]);
+	private static void extend(Dragon dragon) {		
+		// 각 드래곤의 세대 만큼 확장한다. 1세대 부터 시작
+		for(int i = 1; i <= dragon.g; i++) {
+			final int dCnt = dragon.ds.size();
+
+			// 방향 정보를 최신 부터 과거 순으로 읽는다.
+			for(int j = dCnt-1; j >= 0; j--) {
+				int d = dragon.ds.get(j);
+				
+				// 시계방향 90도 회전 후 뱡항 얻기
+				int nextD = nextDir[d];
+				
+				// 변경된 방향으로 끝 점 이동
+				int nx = dragon.x + dc[nextD];
+				int ny = dragon.y + dr[nextD];
+				
+				if(!(nx >= 0 && nx < MAP_SIZE && ny >= 0 && ny < MAP_SIZE)) continue;
+				
+				// 드래곤의 끝점을 이동하고 맵에 표시, 변경된 방향을 리스트 가장 뒤에 저장
+				dragon.x = nx;
+				dragon.y = ny;
+				map[ny][nx] = 1;
+				dragon.ds.addLast(nextD);				
+			}						
+		}
+	}
+	
+	public static void printMap() {
+		for(int i = 0; i < 20; i++) {
+			for(int j = 0; j < 20; j++) {
+				System.out.print(map[i][j] + " ");
 			}
+			System.out.println();
+		}
+		System.out.println();
+	}
+
+	static class Dragon{
+		public int x, y; // 0~100, 끝 점 저장
+		public LinkedList<Integer> ds = new LinkedList<Integer>(); // 0~3, 최신 방향은 끝에 추가시킨다.
+		public int g; // 0~10
+		public Dragon() {}
+		public Dragon(int x, int y, int d, int g) {
+			this.x = x;
+			this.y = y;
+			this.g = g;
+			ds.addLast(d);
 		}
 	}
 }
