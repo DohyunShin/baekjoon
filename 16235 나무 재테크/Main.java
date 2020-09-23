@@ -3,119 +3,128 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 
 public class Main {
 	static int N; // 1~10
-	static int M; // 1~100 (N^2)
+	static int M; // 1~100
 	static int K; // 1~1000
-	static int[][] map = new int[10][10]; //현재 땅 양분 정보
-	static int[][] A = new int[10][10]; //추가되는 고정된 양분 정보
-	static ArrayList<Integer>[][] treeMap = new ArrayList[10][10]; //현재 땅의 나무 정보
-	static int[] dr = {-1, -1, -1, 0, 0, 1, 1, 1};
-	static int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
-	static int treeCnt = 0;
+	static int[][] map = new int[10][10];
+	static int[][] addMap = new int[10][10];
+	static int[][] deathMap = new int[10][10];
+	static ArrayList<Integer>[][] treeMap = new ArrayList[10][10];
+	static int[] dr = {1,-1,0,0,1,-1,1,-1};
+	static int[] dc = {0,0,-1,1,1,1,-1,-1};
+	static int treeCnt;
+	static int res = 0;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		StringTokenizer st = new StringTokenizer(br.readLine());
 		N = Integer.parseInt(st.nextToken());
 		M = Integer.parseInt(st.nextToken());
+		treeCnt = M;
 		K = Integer.parseInt(st.nextToken());
 		for(int i = 0; i < N; i++) {
 			st = new StringTokenizer(br.readLine());
 			for(int j = 0; j < N; j++) {
 				map[i][j] = 5;
-				A[i][j] = Integer.parseInt(st.nextToken());
+				addMap[i][j] = Integer.parseInt(st.nextToken());
 				treeMap[i][j] = new ArrayList<Integer>();
 			}
 		}
 		for(int i = 0; i < M; i++) {
 			st = new StringTokenizer(br.readLine());
-			int r = Integer.parseInt(st.nextToken())-1;
-			int c = Integer.parseInt(st.nextToken())-1;
+			int x = Integer.parseInt(st.nextToken());
+			int y = Integer.parseInt(st.nextToken());
 			int z = Integer.parseInt(st.nextToken());
-			treeMap[r][c].add(z);
+			treeMap[x-1][y-1].add(z);
 		}
-		treeCnt = M;
 		br.close();
 		
 		solution();
-		System.out.println(treeCnt);
+		System.out.println(res=treeCnt);
 	}
 	
 	private static void solution() {
-		int year = 0;
-		
-		while(true) {
-			//봄 & 여름					
-			for(int r=0; r<N; r++) {
-				for(int c=0; c<N; c++) {
-					ArrayList<Integer> ages = treeMap[r][c];
-					if(ages.size() == 0) continue;
-										
-					Collections.sort(ages);
-					int rest = map[r][c];
-					
-					ArrayList<Integer> newAges = new ArrayList<Integer>();
-					
-					for(int i = 0; i < ages.size(); i++) {
-						if(rest >= ages.get(i)){
-							rest -= ages.get(i);							
-							//나이 갱신
-							newAges.add(ages.get(i) + 1);
-						}
-						else {
-							//정렬시켰으니까 양분 부족한 이후 부터는 다 필요 없음
-							for(int j = i; j < ages.size(); j++) {
-								rest += ages.get(j)/2;
-							}
-							break;
-						}
+		for(int i = 0; i < K; i++) {
+			spring();
+			summer();
+			fall();
+			winter();
+		}
+	}
+	private static void spring() {
+		for(int i = 0; i < N; i++) {
+			for(int j = 0; j < N; j++) {
+				if(treeMap[i][j].size() == 0) continue;
+				
+				ArrayList<Integer> trees = treeMap[i][j];
+				final int TREE_CNT = trees.size();
+				int deathIdx = -1;
+				Collections.sort(trees);
+				
+				for(int k = 0; k < TREE_CNT; k++) {
+					if(map[i][j] < trees.get(k)) {
+						deathIdx = k;
+						break;
 					}
-					
-					int deathCnt = ages.size() - newAges.size();
-					treeCnt -= deathCnt;
-					
-					map[r][c] = rest; //양분 갱신
-					treeMap[r][c] = newAges; //나무 리스트 교체
+					else {
+						map[i][j] -= trees.get(k);
+						trees.set(k, trees.get(k)+1);
+					}
 				}
-			}
-			
-			//가을
-			for(int r=0; r<N; r++) {
-				for(int c=0; c<N; c++) {
-					ArrayList<Integer> ages = treeMap[r][c];
-					if(ages.size() == 0) continue;
-					
-					for(Integer age : ages) {
-						if(age % 5 == 0) {
-							int nr, nc;
-							
-							for(int d = 0; d < 8; d++) {
-								nr = r + dr[d];
-								nc = c + dc[d];
-								
-								if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) continue;
-								
-								treeMap[nr][nc].add(1);
-								treeCnt++;
-							}
-						}
+				
+				// 이 나무를 죽여 양분을 얻는 부분의 처리가 중요
+				if(deathIdx != -1) {
+					for(int k = 0; k < TREE_CNT-deathIdx; k++) {
+						deathMap[i][j] += (trees.get(deathIdx)/2);
+						trees.remove(deathIdx);
+						treeCnt--;
 					}
 				}
 			}
-			
-			//겨울
-			for(int i = 0; i < N; i++) {
-				for(int j = 0; j < N; j++) {
-					if(A[i][j] == 0) continue;
-					map[i][j] += A[i][j];
+		}
+	}
+	private static void summer() {
+		for(int i = 0; i < N; i++) {
+			for(int j = 0; j < N; j++) {
+				if(deathMap[i][j] == 0) continue;
+				map[i][j] += deathMap[i][j];
+				deathMap[i][j] = 0;
+			}
+		}
+	}
+	private static void fall() {
+		for(int i = 0; i < N; i++) {
+			for(int j = 0; j < N; j++) {
+				if(treeMap[i][j].size() == 0) continue;
+				
+				ArrayList<Integer> trees = treeMap[i][j];
+				for(int k = 0; k < trees.size(); k++) {
+					if(trees.get(k) % 5 != 0) continue;
+					
+					int nr, nc;
+					for(int d = 0; d < 8; d++) {
+						nr = i+dr[d];
+						nc = j+dc[d];
+						
+						if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) continue;
+						
+						treeMap[nr][nc].add(1);
+						treeCnt++;
+					}
 				}
 			}
-			
-			year++;
-			if(year == K)break;
+		}
+	}
+	private static void winter() {
+		for(int i = 0; i < N; i++) {
+			for(int j = 0; j < N; j++) {
+				map[i][j] += addMap[i][j];
+			}
 		}
 	}
 }
