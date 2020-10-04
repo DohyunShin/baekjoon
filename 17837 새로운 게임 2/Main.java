@@ -1,27 +1,19 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
 
 public class Main {
-	static class Unit{
-		public int r, c, d;
-		public Unit(int r, int c, int d) {
-			this.r = r;
-			this.c = c;
-			this.d = d;
-		}
-	}
-	static int N; //4~12
-	static int K; //4~10
-	static int[][] map = new int[12][12]; //0:흰, 1:빨, 2:파
-	static Deque<Unit>[][] unitMap = new LinkedList[12][12];
+	static int N; // 4~12
+	static int K; // 4~10
+	static LinkedList<Unit>[][] map = new LinkedList[12][12];
 	static Unit[] units = new Unit[10];
-	//우좌상하
-	static int[] dr = {0,0,-1,1};
-	static int[] dc = {1,-1,0,0};
+	static int[][] colorMap = new int[12][12];
+	static final int[] dr = {0,0,-1,1};
+	static final int[] dc = {1,-1,0,0};
 	static int res = 0;
 	
 	public static void main(String[] args) throws IOException{
@@ -32,8 +24,8 @@ public class Main {
 		for(int i = 0; i < N; i++) {
 			st = new StringTokenizer(br.readLine());
 			for(int j = 0; j < N; j++) {
-				map[i][j] = Integer.parseInt(st.nextToken());
-				unitMap[i][j] = new LinkedList<Unit>();
+				map[i][j] = new LinkedList<Unit>();
+				colorMap[i][j] = Integer.parseInt(st.nextToken());
 			}
 		}
 		for(int i = 0; i < K; i++) {
@@ -41,93 +33,89 @@ public class Main {
 			int r = Integer.parseInt(st.nextToken())-1;
 			int c = Integer.parseInt(st.nextToken())-1;
 			int d = Integer.parseInt(st.nextToken())-1;
-			Unit unit = new Unit(r,c,d);
-			units[i]  = unit;
-			unitMap[r][c].addLast(unit);
+			Unit u = new Unit(r,c,d);
+			units[i] = u;
+			map[r][c].addLast(u);
 		}
 		br.close();
 		
 		solution();
-		System.out.println(res >= 1000 ? -1 : res);
+		System.out.println(res >= 1000 ? -1 : res+1);
 	}
 	
 	public static void solution() {
-		Unit unit;
-		int nr, nc, nColor;
-		boolean stop;
-		
-		while(res++ < 1000) {
-			for(int num = 0; num < K; num++) {
-				unit = units[num];
+		while(res < 1000) {
+			for(int i = 0; i < K; i++) {
+				Unit unit = units[i];
 				
-				//이동가능한지 본다.
-				nr = unit.r + dr[unit.d];
-				nc = unit.c + dc[unit.d];
+				int r = unit.r;
+				int c = unit.c;
+				int d = unit.d;
 				
-				if(!(nr >= 0 && nr < N && nc >= 0 && nc < N))
-					nColor = 2;
-				else 
-					nColor = map[nr][nc];
+				int nr = r + dr[d];
+				int nc = c + dc[d];
+				int nColor; // next color
 				
-				//방향을 반대로 변경하여 한칸 이동
+				if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) nColor = 2; // 벽인 경우 파란색으로 처리
+				else nColor = colorMap[nr][nc];
+				
 				if(nColor == 2) {
-					unit.d++;
-					if(unit.d == 2) unit.d = 0;
-					else if(unit.d == 4) unit.d = 2;
+					// 파란색인 경우 방향을 바꿔서 다음을 본다.
+					switch(unit.d) {
+					case 0: unit.d = 1; break;
+					case 1: unit.d = 0; break;
+					case 2: unit.d = 3; break;
+					case 3: unit.d = 2; break;
+					}
 					
-					nr = unit.r + dr[unit.d];
-					nc = unit.c + dc[unit.d];
+					d = unit.d;
 					
-					//방향을 반대로 했을 때 벽이거나 파란색인 경우 이동하지 않는다.
-					if(!(nr >= 0 && nr < N && nc >= 0 && nc < N))
-						nColor = 2;
-					else
-						nColor = map[nr][nc];
+					nr = r + dr[d];
+					nc = c + dc[d];
 					
-					if(nColor == 2) continue;
+					// 다음이 파란색이거나 벽인 경우 움직이지 않는다.
+					if(!(nr >= 0 && nr < N && nc >= 0 && nc < N) || colorMap[nr][nc] == 2) continue;
+					// 다음이 흰색이나 빨간색인 경우 이동을 진행한다.
+					else nColor = colorMap[nr][nc];
 				}
 				
-				stop = move(unit, nr, nc, nColor == 1 ? true : false);
-				
-				if(stop) return;
+				if(nColor == 0 || nColor == 1) {
+					int index = map[r][c].indexOf(unit);
+					LinkedList<Unit> temp = new LinkedList<Main.Unit>();
+					
+					for(int j = map[r][c].size()-1; j >= index; j--) {
+						Unit u = map[r][c].get(j);
+						map[r][c].remove(u);
+						
+						u.r = nr;
+						u.c = nc;
+						temp.addFirst(u);
+					}
+					
+					if(nColor == 1) Collections.reverse(temp);
+					
+					map[nr][nc].addAll(temp);
+					
+					if(map[nr][nc].size() >= 4) return;
+				}
 			}
+			
+			res++;
 		}
 	}
 	
-	public static boolean move(Unit unit, int nr, int nc, boolean isReverse) {
-		boolean stop = false;
-		
-		Deque<Unit> from = unitMap[unit.r][unit.c];
-		Deque<Unit> to = unitMap[nr][nc];
-		Deque<Unit> temp = new LinkedList<Unit>();
-		int tempCnt;
-		Unit tempUnit;
-		
-		boolean found = false;
-		
-		for(Unit u : from) {
-			if(u.equals(unit) && u.hashCode() == unit.hashCode()) {
-				found = true;
-			}
-			
-			if(found) {
-				temp.addLast(u);
-			}
+	static class Unit implements Comparable{
+		public int r, c, d;
+		public Unit(int r, int c, int d) {
+			this.r = r;
+			this.c = c;
+			this.d = d;
 		}
 		
-		tempCnt = temp.size();
-		
-		for(int i = 0; i < tempCnt; i++) {
-			tempUnit = isReverse ? temp.pollLast() : temp.pollFirst();
-			to.addLast(tempUnit);
-			from.remove(tempUnit);
-			
-			tempUnit.r = nr;
-			tempUnit.c = nc;
+		@Override
+		public int compareTo(Object o) {
+			// TODO Auto-generated method stub
+			return 0;
 		}
-		
-		if(to.size() >= 4) stop = true;
-		
-		return stop;
 	}
 }
