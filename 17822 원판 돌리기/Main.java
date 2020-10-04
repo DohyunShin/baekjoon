@@ -6,19 +6,13 @@ import java.util.Queue;
 import java.util.StringTokenizer;
 
 public class Main {
-	static class Point{
-		public int r, c; 
-		public Point(int r, int c) {
-			this.r = r;
-			this.c = c;
-		}
-	}
-	static int N, M; //2~50
-	static int T; //1~50
-	static int[][] map = new int[50][50]; //1~1000
+	static int N, M; // 2~50
+	static int T; // 1~50
+	static int[][] map = new int[50][50];
+	static int remain;
+	static int res = 0;
 	static int[] dr = {-1,1,0,0};
 	static int[] dc = {0,0,-1,1};
-	static int res = 0;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -32,12 +26,12 @@ public class Main {
 				map[i][j] = Integer.parseInt(st.nextToken());
 			}
 		}
-		int x, d, k;
+		remain = N*M; // 원판에 있는 숫자 개수
 		for(int i = 0; i < T; i++) {
 			st = new StringTokenizer(br.readLine());
-			x = Integer.parseInt(st.nextToken());
-			d = Integer.parseInt(st.nextToken());
-			k = Integer.parseInt(st.nextToken());
+			int x = Integer.parseInt(st.nextToken());
+			int d = Integer.parseInt(st.nextToken());
+			int k = Integer.parseInt(st.nextToken());
 			solution(x,d,k);
 		}
 		br.close();
@@ -46,81 +40,105 @@ public class Main {
 		System.out.println(res);
 	}
 	
-	//x: 0~N, d: 0/1, k: 1~M
 	public static void solution(int x, int d, int k) {
-		//돌릴 원판 찾아서 돌리기
-		for(int n = 0; n < N; n++) {
-			if((n+1) % x == 0) {
-				int[] newRow = new int[50];
-				
-				int idx;
+		int cnt = 1;
+		int curK;
+		
+		// 회전
+		while(x*cnt <= N) {
+			int panelIdx = x*cnt-1;
+			int[] panel = new int[M];
+			
+			curK = k;
+			while(curK-- > 0) {
 				if(d == 0) {
-					for(int m = 0; m < M; m++) {
-						idx = (m+k) >= M ? m+k-M : m+k;
-						newRow[idx] = map[n][m];
+					int temp = map[panelIdx][M-1];
+					for(int i = 0; i < M-1; i++) {
+						panel[i+1] = map[panelIdx][i];
 					}
+					panel[0] = temp;
+					
+					map[panelIdx] = panel.clone();
 				}
 				else {
-					for(int m = M-1; m >= 0; m--) {
-						idx = (m-k) < 0 ? m-k+M : m-k;
-						newRow[idx] = map[n][m];
+					int temp = map[panelIdx][0];
+					for(int i = M-1; i > 0; i--) {
+						panel[i-1] = map[panelIdx][i];
+					}
+					panel[M-1] = temp;
+					
+					map[panelIdx] = panel.clone();
+				}
+			}
+			cnt++;
+		}
+		
+		// 원판에 수가 남아있는 경우
+		if(remain > 0) {
+			// 인접하면서 수가 같은 곳 찾기
+			int sum = 0;
+			int sumCnt = 0;
+			boolean found = false;
+			boolean[][] visit = new boolean[N][M];
+			
+			for(int r = 0; r < N; r++) {
+				for(int c = 0; c < M; c++) {
+					if(map[r][c] == 0) continue;
+					
+					if(!found) {
+						// 인접하면서 수가 같은 곳이 한 곳도 없는 경우 평균을 내기 위해 준비
+						sumCnt++;
+						sum += map[r][c];
+					}
+					
+					for(int dir = 0; dir < 4; dir++) {
+						int nr = r + dr[dir];
+						int nc = c + dc[dir];
+						
+						if(!(nr >= 0 && nr < N && nc >= 0 && nc < M)) {
+							// 인접한 수를 볼 때 다른 원판 끼리(행)는 배열 범위 내에서, 
+							// 동일 원판 내에서(열)는 배열 범위 넘어가는 경우 반대의 양 끝으로 이동
+							if(dir == 2) {
+								nc = M-1;
+							}
+							else if(dir == 3) {
+								nc = 0;
+							}
+							else continue;
+						}
+						
+						if(map[r][c] == map[nr][nc]) {
+							visit[r][c] = true;
+							visit[nr][nc] = true;
+							if(!found) found = true;
+						}
 					}
 				}
-				
-				map[n] = newRow;
-				
-				//printMap();
 			}
-		}
-		
-		//원판 갱신
-		refresh();
-		//printMap();
-	}
-	
-	public static void calculate() {
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < M; j++) {
-				if(map[i][j] == 0) continue;
-				res+=map[i][j];
-			}
-		}
-	}
-	
-	public static void refresh() {
-		boolean found = false;
-		
-		int sum = 0;
-		int cnt = 0;
-		
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < M; j++) {
-				if(map[i][j] == 0) continue;
-				
-				//제거할 대상을 찾을때까지는 평균으로 값을 갱신할 것을 대비하여 수를 누적시킨다.
-				if(!found) {
-					sum += map[i][j];
-					cnt++;
-				}
-				
-				//한번이라도 찾았다면 found 는 true가 된다.
-				if(bfs(i, j) && found == false) found = true;
-			}
-		}
-		
-		//수를 한번도 지우지 못한 경우 원판 평균 값으로 갱신
-		if(!found && cnt > 0) {
-			int avr = sum/cnt;
 			
-			for(int i = 0; i < N; i++) {
-				for(int j = 0; j < M; j++) {
-					if(map[i][j] == 0) continue;
-					
-					if(map[i][j] > avr) map[i][j]--;
-					else if(map[i][j] < avr) map[i][j]++;
-					else {
-						if(sum%cnt > 0) {
-							map[i][j]++;
+			// 인접하면서 수가 같은 곳이 한 곳도 없는 경우 평균내기
+			if(!found) {
+				int avr = sum / sumCnt;
+				int rest = sum % sumCnt;
+				
+				for(int r = 0; r < N; r++) {
+					for(int c = 0; c < M; c++) {
+						if(map[r][c] == 0) continue;
+						
+						if(map[r][c] > avr) map[r][c]--;
+						else if(map[r][c] < avr) map[r][c]++;
+						else {
+							if(rest > 0) map[r][c]++; // 주의!) 평균이 실수인 경우
+						}
+					}
+				}
+			}
+			else {
+				for(int r = 0; r < N; r++) {
+					for(int c = 0; c < M; c++) {
+						if(visit[r][c]) {
+							map[r][c] = 0;
+							remain--;
 						}
 					}
 				}
@@ -128,48 +146,18 @@ public class Main {
 		}
 	}
 	
-	//인접하면서 같은 모든 수를 찾은 후 한번에 제거해야하기 때문에 BFS를 사용
-	public static boolean bfs(int r, int c) {
-		boolean res = false;
-		
-		int value = map[r][c];
-		
-		Queue<Point> q = new LinkedList<Point>();
-		q.add(new Point(r, c));
-		
-		Point cur;
-		int nr, nc;
-		while(!q.isEmpty()) {
-			cur = q.poll();
-			
-			for(int d = 0; d < 4; d++) {
-				nr = cur.r + dr[d];
-				nc = cur.c + dc[d];
-								
-				//순환 관계이기 때문에
-				if(nc == -1) nc = M-1;
-				else if(nc == M) nc = 0;
-				
-				if(!(nr >= 0 && nr < N)) continue;
-				
-				if(map[nr][nc] == value && !(nr == r && nc == c)) {
-					map[nr][nc] = 0;
-					res = true;
-					
-					q.add(new Point(nr, nc));
-				}
+	public static void calculate() {
+		for(int r = 0; r < N; r++) {
+			for(int c = 0; c < M; c++) {
+				res += map[r][c];
 			}
 		}
-		
-		//같은 값이 있었다면 시작 지점도 제거한다.
-		if(res) map[r][c] = 0;
-		return res;
 	}
 	
 	public static void printMap() {
-		for(int i = 0; i < N; i++) {
-			for(int j = 0; j < M; j++) {
-				System.out.print(map[i][j] + " ");
+		for(int r = 0; r < N; r++) {
+			for(int c = 0; c < M; c++) {
+				System.out.print(map[r][c] + " ");
 			}
 			System.out.println();
 		}
