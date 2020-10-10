@@ -6,289 +6,223 @@ import java.util.Map.Entry;
 import java.util.StringTokenizer;
 
 public class Main {
-	static int N; //1~10000
-	static int ROW_SIZE = 4;
-	static int COL_SIZE = 6;
-	static int[][] greenMap = new int[ROW_SIZE][COL_SIZE];
-	static int[][] blueMap = new int[ROW_SIZE][COL_SIZE];
-	static HashMap<Integer, Integer> blockInfos = new HashMap<Integer, Integer>();
-	static int BLOCK_IDX = 1;
-	
+	static int N; // 1~10000
+	static int[][] green = new int[6][4];
+	static int[][] blue = new int[6][4];
+	static int idx3 = 3;
 	static int score = 0;
-	static int blockCnt = 0;
+	static int tileCnt = 0;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		StringTokenizer st = null;
 		N = Integer.parseInt(br.readLine());
-		int t, x, y;
-		for(int n = 0; n < N; n++) {
+		StringTokenizer st = null;
+		for(int i = 0; i < N; i++) {
 			st = new StringTokenizer(br.readLine());
-			t = Integer.parseInt(st.nextToken());
-			x = Integer.parseInt(st.nextToken());
-			y = Integer.parseInt(st.nextToken());
-			solution(t, x, y);
+			int green_t = Integer.parseInt(st.nextToken());
+			int green_r = Integer.parseInt(st.nextToken());
+			int green_c = Integer.parseInt(st.nextToken());
+			
+			solution(true, green, green_t, green_r, green_c);
+			
+			int blue_t = 0;
+			int blue_r = 0;
+			int blue_c = 0;
+			
+			switch(green_t) {
+			case 1: 
+				blue_t = 1; 
+				blue_r = green_c;
+				blue_c = 4-green_r-1;
+				break;
+			case 2: 
+				blue_t = 3;
+				blue_r = green_c;
+				blue_c = 4-green_r-1;
+				break;
+			case 3: 
+				blue_t = 2; 
+				blue_r = green_c;
+				blue_c = 4-green_r-1-1;
+				break;
+			}
+			
+			
+			solution(false, blue, blue_t, blue_r, blue_c);
 		}
 		br.close();
 		
-		System.out.println(score);
-		if(blockInfos.size() > 0) {
-			for(Entry<Integer, Integer> entry : blockInfos.entrySet()) {
-				int tv = entry.getValue();
-				if(tv >= 2) blockCnt += 2;
-				else blockCnt++;
+		// 타일 개수
+		for(int i = 0; i < 2; i++) {
+			int[][] map = i == 0 ? green : blue;
+			for(int r = 0; r < 6; r++) {
+				for(int c = 0; c < 4; c++) {
+					if(map[r][c] != 0) tileCnt++;
+				}
 			}
-			System.out.println(blockCnt);
 		}
-		else 
-			System.out.println(0);
-		
+		System.out.println(score);
+		System.out.println(tileCnt);
 	}
-
-	public static void solution(int t, int x, int y) {
-		int bt, br;
-		bt = t;
-		br = x;
-		
-		int gt, gr;
+	
+	public static void solution(boolean isGreen, int[][] map, int t, int r, int c) {
+		// 준비
 		switch(t) {
+		case 1:
+			map[0][c] = 1;
+			break;
 		case 2:
-			gt = 3;
+			map[0][c] = 2;
+			map[0][c+1] = 2;
 			break;
 		case 3:
-			gt = 2;
+			map[0][c] = idx3;
+			map[1][c] = idx3;
+			idx3++;
 			break;
-		default:
-			gt = t;
-			break;
-		}
-		gr = y;
-		
-		add(true, bt, br);
-		add(false, gt, gr);
-
-		removeFullColumnLoop(true);
-		removeFullColumnLoop(false);
-
-		removeEndColumn(true);
-		removeEndColumn(false);		
-	}
-	
-	//블록을 시작 지점에 추가, 시작 지점은 항상 비어있다고 생각.
-	public static void add(boolean isBlue, int t, int r) {
-		int[][] map = isBlue ? greenMap : blueMap;
-		
-		if(t == 1) {			
-			map[r][0] = BLOCK_IDX;
-		}
-		else if(t == 2) {			
-			map[r][0] = BLOCK_IDX;
-			map[r][1] = BLOCK_IDX;
-		}
-		else if(t == 3) {			
-			map[r][0] = BLOCK_IDX;
-			map[r+1][0] = BLOCK_IDX;
-		}
-
-		blockInfos.put(BLOCK_IDX, t);
-		BLOCK_IDX++;
-	}
-	
-	//모든 블록을 오른쪽으로 이동시킨다.
-	public static void moveRightAllBlock(boolean isBlue) {
-		int[][] map = isBlue ? greenMap : blueMap;
-		
-		for(int c = COL_SIZE-1; c >= 0; c--) {
-			int r = 0;
-			while(r < ROW_SIZE) {
-				int blockIdx = map[r][c];
-
-				if(blockIdx != 0) {
-					 int t = blockInfos.get(blockIdx);
-					
-					if(t == 1) {
-						int nc = c;
-						while(nc < COL_SIZE) {
-							//현재 블록이 아닌 처음 만나는 블록을 만나면 멈춘다.
-							if(map[r][nc] != blockIdx && map[r][nc] != 0) break;
-							nc++;
-						}
-						if(nc > c) nc--; //만난 블록 앞으로 열의 인덱스를 맞춘다.
-						
-						//이동
-						map[r][c] = 0;
-						map[r][nc] = blockIdx;
-					}
-					else if(t == 2 && c > 0 && map[r][c-1] == blockIdx) {
-						int nc = c;
-						while(nc < COL_SIZE) {
-							//현재 블록이 아닌 처음 만나는 블록을 만나면 멈춘다.
-							if(map[r][nc] != blockIdx && map[r][nc] != 0) break;
-							nc++;
-						}
-						if(nc > c) nc--; //만난 블록 앞으로 열의 인덱스를 맞춘다.
-						
-						//이동
-						map[r][c] = 0;
-						map[r][c-1] = 0;
-						map[r][nc] = blockIdx;
-						map[r][nc-1] = blockIdx;
-					}
-					else if(t == 3 && r+1 < ROW_SIZE && map[r+1][c] == blockIdx) {
-						int nc1 = c; //첫번째 행의 열
-						int nc2 = c; //두번째 행의 열
-						
-						while(nc1 < COL_SIZE || nc2 < COL_SIZE) {
-							if(nc1 < COL_SIZE) {
-								//현재 블록이 아닌 처음 만나는 블록을 만나면 멈춘다.
-								if(map[r][nc1] != blockIdx && map[r][nc1] != 0) break;
-							}
-						
-							if(nc2 < COL_SIZE) {
-								//현재 블록이 아닌 처음 만나는 블록을 만나면 멈춘다.
-								if(map[r+1][nc2] != blockIdx && map[r+1][nc2] != 0) break;
-							}
-							nc1++; nc2++;
-						}
-						int nc = Integer.min(nc1, nc2); //작은 인덱스의 열을 따른다.
-						if(nc > c) nc--; //만난 블록 앞으로 열의 인덱스를 맞춘다.
-						
-						map[r][c] = 0;
-						map[r+1][c] = 0;
-						map[r][nc] = blockIdx;
-						map[r+1][nc] = blockIdx;
-						
-						r++;
-					}
-				}
-				
-				r++;
-			}
-		}
-	}
-	
-	//가득 차있는 열을 제거하고 점수를 증가 시킨다. 만약 하나의 열이라도 제거되는 경우 true를 반환한다.
-	public static boolean removeFullColumn(boolean isBlue) {
-		int[][] map = isBlue ? greenMap : blueMap;
-		
-		int removeCnt = 0;
-		for(int c = COL_SIZE-1; c >= 0; c--) {
-			boolean isFull = true;
-			
-			for(int r = 0; r < ROW_SIZE; r++) {
-				if(map[r][c] == 0) {
-					isFull = false;
-					break;
-				}
-			}
-			
-			if(isFull) {
-				//해당 열을 제거한다.
-				int r = 0;
-				while(r < ROW_SIZE) {
-					int idx = map[r][c];
-					int t = blockInfos.get(idx);
-					
-					if(t == 1) {
-						map[r][c] = 0;
-						blockInfos.remove(idx);
-						r++;
-					}
-					else if(t == 2) {
-						map[r][c] = 0;
-						blockInfos.replace(idx, 1); //1번 타입 블록으로 변경
-						r++;
-					}
-					else if(t == 3 && r+1 < ROW_SIZE) {
-						map[r][c] = 0;
-						map[r+1][c] = 0;
-						blockInfos.remove(idx);
-						r+=2;
-					}
-				}
-				
-				removeCnt++;
-			}
 		}
 		
-		score += removeCnt;
+		down(map);
 		
-		if(removeCnt > 0) return true;
-		else return false;
-	}
-	
-	//가득 차있는 열이 없을 때 까지 가득 차있는 열을 제거하고 오른쪽으로 모든 블록을 이동한다.
-	public static void removeFullColumnLoop(boolean isBlue) {		
+		// 행 제거하고 내리기(사라지는 행이 없을때 까지 반복)
+		boolean remove = false;
 		do {
-			moveRightAllBlock(isBlue);
-			if(!removeFullColumn(isBlue))break;
-		}while(true);
-	}
-	
-	//시작점을 검사하여 블록이 존재하는 시작점 개수 만큼 끝에서 제거한다.
-	public static void removeEndColumn(boolean isBlue) {
-		int[][] map = isBlue ? greenMap : blueMap;
-		
-		int removeColumn = COL_SIZE-1;
-		
-		for(int c = 0; c < 2; c++) {
-			boolean isExist = false;
-			
-			for(int r = 0; r < ROW_SIZE; r++) {
-				if(map[r][c] != 0) {
-					isExist = true;
-					break;
-				}
-			}
-			
-			if(isExist) {
-				//열 제거
-				int r = 0;
-				while(r < ROW_SIZE) {
-					int idx = map[r][removeColumn];
-					if(idx == 0) {
-						r++;
-						continue;
-					}
-					
-					int t = blockInfos.get(idx);
-					
-					if(t == 1) {
-						map[r][removeColumn] = 0;
-						blockInfos.remove(idx);
-						r++;
-					}
-					else if(t == 2) {
-						map[r][removeColumn] = 0;
-						blockInfos.replace(idx, 1); //1번 타입 블록으로 변경
-						r++;
-					}
-					else if(t == 3 && r+1 < ROW_SIZE) {
-						map[r][removeColumn] = 0;
-						map[r+1][removeColumn] = 0;
-						blockInfos.remove(idx);
-						r+=2;
+			remove = false;
+			// 사라지는 행이 있는지 검사한다.
+			for(int i = 5; i >= 0; i--) {
+				boolean removeRow = true;
+				for(int j = 0; j < 4; j++) {
+					if(map[i][j] == 0) {
+						removeRow = false;
+						break;
 					}
 				}
 				
-				removeColumn--;
+				if(removeRow) {
+					remove = true;
+					score++;
+					// 행 제거
+					for(int j = 0; j < 4; j++) {
+						if(map[i][j] >= 3) {
+							if(i-1 >= 0 && map[i-1][j] == map[i][j])
+								map[i-1][j] = 1; 
+							else if(i+1 < 6 && map[i+1][j] == map[i][j])
+								map[i+1][j] = 1;
+						}
+						
+						map[i][j] = 0;
+					}
+				}
+			}
+			
+			if(remove) {
+				down(map);
+			}
+		}while(remove);
+		
+		// 0~1 행에 블록 있으면 행 개수 만큼 밑에 제거
+		int noneEmptyCnt = 0;
+		for(int i = 1; i >= 0; i--) {
+			boolean emptyRow = true;
+			for(int j = 0; j < 4; j++) {
+				if(map[i][j] != 0) {
+					emptyRow = false;
+					break;
+				}
+			}
+			if(!emptyRow) {
+				noneEmptyCnt++;
 			}
 		}
 		
-		if(removeColumn < COL_SIZE-1) {
-			moveRightAllBlock(isBlue);	
+		int removeRow = 5;
+		for(int i = 0; i < noneEmptyCnt; i++) {
+			for(int j = 0; j < 4; j++) {
+				if(map[removeRow][j] >= 3) {
+					if(removeRow-1 >= 0 && map[removeRow-1][j] == map[removeRow][j])
+						map[removeRow-1][j] = 1; 
+					else if(removeRow+1 < 6 && map[removeRow+1][j] == map[removeRow][j])
+						map[removeRow+1][j] = 1;
+				}
+				
+				map[removeRow][j] = 0;
+			}
+			removeRow--;
+		}
+		if(noneEmptyCnt > 0) down(map);
+		
+//		printMap(isGreen, map);
+	}
+	
+	public static void down(int[][] map) {
+		for(int r = 5; r >= 0; r--) {
+			for(int c = 0; c < 4; c++) {
+				int t = map[r][c];
+				
+				if(t == 1) {
+					int cr = r;
+					int nr = 0;
+					while(true){
+						nr = cr + 1;
+						
+						if(!(nr < 6)) break;
+						if(map[nr][c] != 0) break;
+						cr = nr;
+					}
+					
+					if(cr != r) {
+						map[cr][c] = map[r][c];
+						map[r][c] = 0;
+					}
+				}
+				else if(t == 2 && c+1 < 4 && map[r][c+1] == 2) {
+					int cr = r;
+					int nr = 0;
+					while(true){
+						nr = cr + 1;
+						
+						if(!(nr < 6)) break;
+						if(map[nr][c] != 0 || map[nr][c+1] != 0) break;
+						cr = nr;
+					}
+					
+					if(cr != r) {
+						int temp = map[r][c];
+						map[r][c] = 0;
+						map[r][c+1] = 0;
+						map[cr][c] = temp;
+						map[cr][c+1] = temp;
+					}
+				}
+				else if(t >= 3 && r-1 >= 0 && map[r-1][c] >= 3) {
+					int cr = r;
+					int nr = 0;
+					while(true){
+						nr = cr + 1;
+						
+						if(!(nr < 6)) break;
+						if(map[nr][c] != 0) break;
+						cr = nr;
+					}
+					
+					if(cr != r) {
+						int temp = map[r][c];
+						map[r][c] = 0;
+						map[r-1][c] = 0;
+						map[cr][c] = temp;
+						map[cr-1][c] = temp;
+					}
+				}
+			}
 		}
 	}
 	
-	public static void printMap(boolean isBlue) {
-		int[][] map = isBlue ? greenMap : blueMap;
-		
-		if(isBlue) System.out.println("<BLUE>");
-		else System.out.println("<GREEN>");
-		
-		for(int r = 0; r < ROW_SIZE; r++) {
-			for(int c = 0; c < COL_SIZE; c++) {
-				System.out.print(map[r][c] + "\t");
+	public static void printMap(boolean isGreen, int[][] map) {
+//		if(!isGreen) return;
+		System.out.println(isGreen ? "green" : "blue");
+		for(int i = 0; i < 6; i++) {
+			for(int j = 0; j < 4; j++) {
+				System.out.print(map[i][j] + " ");
 			}
 			System.out.println();
 		}
