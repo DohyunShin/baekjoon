@@ -4,187 +4,141 @@ import java.io.InputStreamReader;
 import java.util.StringTokenizer;
 
 public class Main {
-	
-	static int N; //1~20
+	static int N; // 1~20
 	static int[][] map = new int[20][20];
-	static int max = Integer.MIN_VALUE;
+	static int[] dr = {-1,1,0,0};
+	static int[] dc = {0,0,-1,1};
+	static int res = 0;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		N = Integer.parseInt(br.readLine());
 		StringTokenizer st = null;
-		for(int i = 0; i < N; i++) {
+		for(int r = 0; r < N; r++) {
 			st = new StringTokenizer(br.readLine());
-			for(int j = 0; j < N; j++) {
-				map[i][j] = Integer.parseInt(st.nextToken());
+			for(int c = 0; c < N; c++) {
+				map[r][c] = Integer.parseInt(st.nextToken());
 			}
 		}
 		br.close();
 		
-		findMax();//최대값 초기 설정
 		solution();
-		System.out.println(max);
+		System.out.println(res);
 	}
 	
-	private static void solution() {
-		recursive(0);
+	public static void solution() {
+		dfs(0);
 	}
 	
-	private static void recursive(int cnt) {
+	public static void dfs(int cnt) {
 		if(cnt == 5) {
+			int max = 0;
+			for(int r = 0; r < N; r++) {
+				for(int c = 0; c < N; c++) {
+					if(map[r][c] > max) max = map[r][c];
+				}
+			}
+			if(res < max) res = max;
 			return;
 		}
 		
-		//현재 맵 상태 저장(원복을 위해)
-		int[][] pre = new int[20][20];
-		for(int i=0;i<N;i++) {
-			pre[i] = map[i].clone();
+		int[][] copy = map.clone();
+		for(int r = 0; r < N; r++) {
+			copy[r] = map[r].clone();
 		}
 		
 		for(int d = 0; d < 4; d++) {
-			if(move(d)) {
-				//변화가 있을 경우에만
-				findMax();
-				recursive(cnt+1);
-				
-				//원복
-				for(int i=0;i<N;i++) {
-					map[i] = pre[i].clone();
+			move(d);
+			
+			dfs(cnt+1);
+			
+			map = copy.clone();
+			for(int r = 0; r < N; r++) {
+				map[r] = copy[r].clone();
+			}
+		}
+	}
+	
+	public static void moveEx(int d, int r, int c, boolean[][] sum) {
+		int cr = r;
+		int cc = c;
+		int nr, nc;
+		
+		boolean isSum = false;
+		
+		while(true) {
+			nr = cr + dr[d];
+			nc = cc + dc[d];
+			
+			if(!(nr >= 0 && nr < N && nc >= 0 && nc < N)) break;
+			if(map[nr][nc] != 0) {
+				if(map[nr][nc] == map[r][c] && sum[nr][nc] == false) {
+					isSum = true;
+				}
+				break;
+			}
+			
+			cr = nr;
+			cc = nc;
+		}
+		
+		if(isSum) {
+			// 앞으로 합치기
+			int temp = map[r][c];
+			map[nr][nc] += temp;
+			map[r][c] = 0;
+			
+			sum[nr][nc] = true;
+		}
+		else {
+			// 이동
+			int temp = map[r][c];
+			map[r][c] = 0;
+			map[cr][cc] = temp;
+		}
+		
+	}
+	
+	public static void move(int d) {
+		boolean[][] sum = new boolean[N][N]; // 합쳐진 위치 저장
+		
+		if(d == 0) {
+			for(int r = 0; r < N; r++) {
+				for(int c = 0; c < N; c++) {
+					moveEx(d, r, c, sum);
+				}
+			}
+		}
+		else if(d == 1) {
+			for(int r = N-1; r >= 0; r--) {
+				for(int c = 0; c < N; c++) {
+					moveEx(d, r, c, sum);
+				}
+			}
+		}
+		else if(d == 2) {
+			for(int r = 0; r < N; r++) {
+				for(int c = 0; c < N; c++) {
+					moveEx(d, r, c, sum);
+				}
+			}
+		}
+		else if(d == 3) {
+			for(int r = 0; r < N; r++) {
+				for(int c = N-1; c >= 0; c--) {
+					moveEx(d, r, c, sum);
 				}
 			}
 		}
 	}
 	
-	private static void findMax() {
-		for(int r=0;r<N;r++) {
-			for(int c=0;c<N;c++) {
-				if(map[r][c] > max) max = map[r][c];
+	public static void printMap() {
+		for(int r = 0; r < N; r++) {
+			for(int c = 0; c < N; c++) {
+				System.out.print(map[r][c] + " ");
 			}
+			System.out.println();
 		}
-	}
-	
-	private static boolean move(int d) {
-		boolean isChanged = false; //값이 변경되거나 이동할 경우 true
-		
-		switch(d) {
-		case 0: //상
-			for(int c=0;c<N;c++) {
-				for(int r=0;r<N;r++) {
-					if(map[r][c] == 0) continue;
-					
-					for(int nr=r+1; nr<N;nr++) {
-						if(map[nr][c] != 0 && map[nr][c] != map[r][c]) break;
-						
-						if(map[nr][c] == 0) continue;
-						else if(map[nr][c] == map[r][c]) {
-							map[r][c] *= 2;
-							map[nr][c] = 0;
-							isChanged = true;
-							break;
-						}
-					}
-					
-					//이동
-					for(int mr = 0; mr < r; mr++) {
-						if(map[mr][c] == 0) {
-							map[mr][c] = map[r][c];
-							map[r][c] = 0;
-							isChanged = true;
-							break;
-						}
-					}
-				}
-			}
-			break;
-		case 1: //하
-			for(int c=0;c<N;c++) {
-				for(int r=N-1;r>=0;r--) {
-					if(map[r][c] == 0) continue;
-					
-					for(int nr=r-1; nr>=0;nr--) {
-						if(map[nr][c] != 0 && map[nr][c] != map[r][c]) break;
-						
-						if(map[nr][c] == 0) continue;
-						else if(map[nr][c] == map[r][c]) {
-							map[r][c] *= 2;
-							map[nr][c] = 0;
-							isChanged = true;
-							break;
-						}
-					}
-					
-					//이동
-					for(int mr = N-1; mr > r; mr--) {
-						if(map[mr][c] == 0) {
-							map[mr][c] = map[r][c];
-							map[r][c] = 0;
-							isChanged = true;
-							break;
-						}
-					}
-				}
-			}
-			break;
-		case 2: //좌
-			for(int r=0;r<N;r++) {
-				for(int c=0;c<N;c++) {
-					if(map[r][c] == 0) continue;
-					
-					for(int nc=c+1; nc<N;nc++) {
-						if(map[r][nc] != 0 && map[r][nc] != map[r][c]) break;
-						
-						if(map[r][nc] == 0) continue;
-						else if(map[r][nc] == map[r][c]) {
-							map[r][c] *= 2;
-							map[r][nc] = 0;
-							isChanged = true;
-							break;
-						}
-					}
-					
-					//이동
-					for(int mc = 0; mc < c; mc++) {
-						if(map[r][mc] == 0) {
-							map[r][mc] = map[r][c];
-							map[r][c] = 0;
-							isChanged = true;
-							break;
-						}
-					}
-				}
-			}
-			break;
-		case 3: //우
-			for(int r=0;r<N;r++) {
-				for(int c=N-1;c>=0;c--) {
-					if(map[r][c] == 0) continue;
-					
-					for(int nc=c-1; nc>=0;nc--) {
-						if(map[r][nc] != 0 && map[r][nc] != map[r][c]) break;
-						
-						if(map[r][nc] == 0) continue;
-						else if(map[r][nc] == map[r][c]) {
-							map[r][c] *= 2;
-							map[r][nc] = 0;
-							isChanged = true;
-							break;
-						}
-					}
-					
-					//이동
-					for(int mc = N-1; mc > c; mc--) {
-						if(map[r][mc] == 0) {
-							map[r][mc] = map[r][c];
-							map[r][c] = 0;
-							isChanged = true;
-							break;
-						}
-					}
-				}
-			}
-			break;
-		}
-		
-		return isChanged;
+		System.out.println();
 	}
 }
