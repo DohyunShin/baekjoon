@@ -4,12 +4,11 @@ import java.io.InputStreamReader;
 import java.util.StringTokenizer;
 
 public class Main {
-	
-	static int N; //세로선 col 2~10
-	static int H; //가로선 row 1~30
-	static int M; //이미 존재하는 가로선 개수 0~(N-1)*H
+	static int N; // 2~10
+	static int M; 
+	static int H; // 1~30
 	static int[][] map = new int[30][10];
-	static int min = 4;
+	static int res = Integer.MAX_VALUE;
 	
 	public static void main(String[] args) throws IOException{
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -17,70 +16,75 @@ public class Main {
 		N = Integer.parseInt(st.nextToken());
 		M = Integer.parseInt(st.nextToken());
 		H = Integer.parseInt(st.nextToken());
-		for(int i=0;i<M;i++) {
+		for(int i = 0; i < M; i++) {
 			st = new StringTokenizer(br.readLine());
-			map[Integer.parseInt(st.nextToken())-1][Integer.parseInt(st.nextToken())-1] = 1;
+			int a = Integer.parseInt(st.nextToken())-1;
+			int b = Integer.parseInt(st.nextToken())-1;
+			map[a][b] = 1;
 		}
 		br.close();
 		
 		solution();
-		System.out.println(min > 3 ? -1 : min);
+		System.out.println(res == Integer.MAX_VALUE ? -1 : res);
 	}
 	
-	private static void solution() {
-		for(int i=0;i<=3;i++) {
-			if(recursive(0,i,0,0)) break;	
+	public static void solution() {
+		for(int i = 0; i <= 3; i++) {
+			if(dfs(i, 0, 0, 0)) {
+				res = i;
+				break;
+			}
 		}
 	}
 	
-	private static boolean recursive(int cnt, int targetCnt, int r, int c) {
-		//printMap();
-		
-		if(cnt > 3) {
+	public static boolean dfs(final int goal, int cnt, int sr, int sc) {
+		if(cnt == goal) {
+			if(play()) return true;
 			return false;
 		}
 		
-		//확인
-		if(cnt==targetCnt) {
-			if(simulation()) {
-				if(cnt < min) min = cnt;
-				return true;	
-			}
-			else return false;
-		}
-		
-		for(int i=r;i<H;i++) {
-			for(int j=c;j<N-1;j++) {
-				if(map[i][j] != 0 || (j-1 >= 0 && map[i][j-1] != 0)) continue;
+		for(int r = sr; r < H; r++) {
+			for(int c = sc; c < N-1; c++) {
+				if(map[r][c] == 1) continue;
+				if((c+1 < N && map[r][c+1] == 1) || (c-1 >= 0 && map[r][c-1] == 1)) continue;
 				
-				map[i][j] = 1;
-				if(recursive(cnt+1, targetCnt, i, j+2)) return true; //어차피 사다리를 연속해서 놓을  수 없기 때문에 사다리를 놓은 바로 옆을 건너뛰고 시작한다. (시간 단축)
-				map[i][j] = 0;
+				map[r][c] = 1;
+				if(dfs(goal, cnt+1, r, c)) return true;
+				map[r][c] = 0;
 			}
-			c = 0;
+			sc = 0;
 		}
 		
 		return false;
 	}
 	
-	private static boolean simulation() {		
-		for(int c=0;c<N;c++) {
-			int cRes = c;
-			int r = 0;
+	public static boolean play() {		
+		//printMap();
+		
+		for(int c = 0; c < N-1; c++) {
+			int cr = 0;
+			int cc = c;
+			int nr, nc;
 			
-			while(r < H) {
-				//오른쪽으로 가야하는지 확인
-				if(cRes+1 < N && map[r][cRes]==1) {
-					cRes++;
+			while(cr < H) {
+				if(map[cr][cc] == 1) {
+					nc = cc + 1;
 				}
-				//왼쪽으로 가야하는지 확인
-				else if(cRes-1 >= 0 && map[r][cRes-1]==1) {
-					cRes--;
+				else if(cc-1 >= 0 && map[cr][cc-1] == 1) {
+					nc = cc - 1;
 				}
-				r++;
+				else{
+					nc = cc;
+				}
+				
+				
+				nr = cr + 1;
+								
+				cr = nr;
+				cc = nc;
 			}
 			
-			if(cRes != c) {
+			if(c != cc) {
 				return false;
 			}
 		}
@@ -88,10 +92,10 @@ public class Main {
 		return true;
 	}
 	
-	private static void printMap() {
-		for(int i=0;i<H;i++) {
-			for(int j=0;j<N;j++) {
-				System.out.print(map[i][j] + " ");
+	public static void printMap() {
+		for(int r = 0; r < H; r++) {
+			for(int c = 0; c < N; c++) {
+				System.out.print(map[r][c] + " ");
 			}
 			System.out.println();
 		}
